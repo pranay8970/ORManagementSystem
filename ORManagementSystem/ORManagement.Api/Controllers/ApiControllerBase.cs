@@ -30,7 +30,59 @@ public abstract class ApiControllerBase : ControllerBase
             "ROOM_UPDATE_FAILED" => BadRequest(Error(result)),
             "ROOM_DELETE_FAILED" => BadRequest(Error(result)),
             "INVALID_DATE_RANGE" => BadRequest(Error(result)),
-
+            "REQUEST_NOT_FOUND" => NotFound(Error(result)),
+            "REQUEST_UPDATE_FAILED" => BadRequest(Error(result)),
+            "REQUEST_CANCEL_FAILED" => BadRequest(Error(result)),
+            "REQUEST_STATUS_UPDATE_FAILED" => BadRequest(Error(result)),
+            "INVALID_REQUEST_STATUS" => BadRequest(Error(result)),
+            "INVALID_QUARTER" => BadRequest(Error(result)),
+            "INVALID_PRIORITY" => BadRequest(Error(result)),
+            "INVALID_READINESS" => BadRequest(Error(result)),
+            "INVALID_AVAILABLE_DAYS" => BadRequest(Error(result)),
+            "CYCLE_NOT_FOUND" => NotFound(Error(result)),
+            "INVALID_CYCLE_STATUS" => BadRequest(Error(result)),
+            "CYCLE_CUTOFF_FAILED" => BadRequest(Error(result)),
+            "CYCLE_PUBLISH_FAILED" => BadRequest(Error(result)),
+            "CASE_NOT_FOUND" => NotFound(Error(result)),
+            "INVALID_CASE_TIME" => BadRequest(Error(result)),
+            "INVALID_BLOCK" => BadRequest(Error(result)),
+            "CASE_CONFLICT" => Conflict(Error(result)),
+            "CASE_UPDATE_FAILED" => BadRequest(Error(result)),
+            "CASE_STATUS_UPDATE_FAILED" => BadRequest(Error(result)),
+            "INVALID_CASE_STATUS" => BadRequest(Error(result)),
+            "INVALID_CASE_TRANSITION" => BadRequest(Error(result)),
+            "CANCELLATION_REASON_REQUIRED" => BadRequest(Error(result)),
+            "INVALID_CANCELLATION_REASON" => BadRequest(Error(result)),
+            "DATE_OUTSIDE_AVAILABILITY" => BadRequest(Error(result)),
+            "INVALID_BLOCK_TIME" => BadRequest(Error(result)),
+            "TEMPLATE_NOT_FOUND" => NotFound(Error(result)),
+            "TEMPLATE_UPDATE_FAILED" => BadRequest(Error(result)),
+            "TEMPLATE_DEACTIVATE_FAILED" => BadRequest(Error(result)),
+            "EXCEPTION_ALREADY_EXISTS" => Conflict(Error(result)),
+            "EXCEPTION_NOT_FOUND" => NotFound(Error(result)),
+            "INVALID_BLOCK_STATUS" => BadRequest(Error(result)),
+            "BLOCK_NOT_FOUND" => NotFound(Error(result)),
+            "BLOCK_CONFLICT" => Conflict(Error(result)),
+            "BLOCK_UPDATE_FAILED" => BadRequest(Error(result)),
+            "BLOCK_CANCEL_FAILED" => BadRequest(Error(result)),
+            "INVALID_RELEASE_TIME" => BadRequest(Error(result)),
+            "FORBIDDEN_BLOCK_RELEASE" => StatusCode(403, Error(result)),
+            "BLOCK_RELEASE_FAILED" => BadRequest(Error(result)),
+            "SURGEON_CLAIM_MISSING" => Unauthorized(Error(result)),
+            "RELEASED_SLOT_NOT_FOUND" => NotFound(Error(result)),
+            "INVALID_SLOT_STATE" => BadRequest(Error(result)),
+            "SLOT_UPDATE_FAILED" => BadRequest(Error(result)),
+            "WAITLIST_NOT_FOUND" => NotFound(Error(result)),
+            "WAITLIST_ASSIGN_FAILED" => BadRequest(Error(result)),
+            "WAITLIST_REMOVE_FAILED" => BadRequest(Error(result)),
+            "DATE_RANGE_REQUIRED" => BadRequest(Error(result)),
+            "SETTING_NOT_FOUND" => NotFound(Error(result)),
+            "INVALID_SETTING_KEY" => BadRequest(Error(result)),
+            "INVALID_SETTING_VALUE" => BadRequest(Error(result)),
+            "SETTING_UPDATE_FAILED" => BadRequest(Error(result)),
+            "INVALID_FORECAST_STATUS" => BadRequest(Error(result)),
+            "FORECAST_RECOMMENDATION_NOT_FOUND" => NotFound(Error(result)),
+            "FORECAST_STATUS_UPDATE_FAILED" => BadRequest(Error(result)),
             _ => BadRequest(Error(result))
         };
     }
@@ -54,6 +106,17 @@ public abstract class ApiControllerBase : ControllerBase
         };
     }
 
+    protected int? GetCurrentSurgeonId()
+    {
+        var surgeonIdValue = User.FindFirstValue("surgeonId");
+
+        if (!int.TryParse(surgeonIdValue, out var surgeonId))
+        {
+            return null;
+        }
+
+        return surgeonId;
+    }
     protected int? GetCurrentUserId()
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);

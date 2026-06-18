@@ -41,6 +41,8 @@ public partial class ORRequest
 
     public DateTime CreatedAt { get; set; }
 
+    public int AvailableDaysMask { get; set; }
+
     public virtual SchedulingCycle? Cycle { get; set; }
 
     public virtual Hospital Hospital { get; set; } = null!;

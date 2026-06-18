@@ -1,13 +1,14 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ORManagement.Api.Middleware;
+using ORManagement.Application.Engines;
 using ORManagement.Application.Interfaces.Repositories;
 using ORManagement.Application.Interfaces.Services;
 using ORManagement.Application.Services;
 using ORManagement.Infrastructure.Data;
 using ORManagement.Infrastructure.Repositories;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,18 +33,66 @@ builder.Services.AddDbContext<ORManagementDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ORManagementConnection")));
 
 // Add services to the container.
+// Auth
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Audit
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
+// Master Data
 builder.Services.AddScoped<IMasterDataRepository, MasterDataRepository>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
 
+// Rooms
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 
+// Engines
+builder.Services.AddScoped<AvailabilityWindowEngine>();
+builder.Services.AddScoped<PriorityScoreEngine>();
+builder.Services.AddScoped<ForecastRecommendationEngine>();
 
+// Requests
+builder.Services.AddScoped<IRequestRepository, RequestRepository>();
+builder.Services.AddScoped<IRequestService, RequestService>();
+
+// Cycles
+builder.Services.AddScoped<ICycleRepository, CycleRepository>();
+builder.Services.AddScoped<ISchedulingCycleService, SchedulingCycleService>();
+
+// Cases
+builder.Services.AddScoped<ICaseRepository, CaseRepository>();
+builder.Services.AddScoped<ICaseService, CaseService>();
+
+// Blocks
+builder.Services.AddScoped<IBlockRepository, BlockRepository>();
+builder.Services.AddScoped<IBlockService, BlockService>();
+
+// Waitlist
+builder.Services.AddScoped<IWaitlistRepository, WaitlistRepository>();
+builder.Services.AddScoped<IWaitlistService, WaitlistService>();
+
+// Utilization
+builder.Services.AddScoped<IUtilizationRepository, UtilizationRepository>();
+builder.Services.AddScoped<IUtilizationService, UtilizationService>();
+
+// Dashboard
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Settings
+builder.Services.AddScoped<ISettingsRepository, SettingsRepository>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+
+// Forecast
+builder.Services.AddScoped<IForecastRepository, ForecastRepository>();
+builder.Services.AddScoped<IForecastService, ForecastService>();
+
+// Notification Stack
+builder.Services.AddScoped<INotificationStackRepository, NotificationStackRepository>();
+builder.Services.AddScoped<INotificationStackService, NotificationStackService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

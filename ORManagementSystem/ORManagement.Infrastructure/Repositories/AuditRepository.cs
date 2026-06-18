@@ -1,4 +1,5 @@
-﻿using ORManagement.Application.DTOs.Audit;
+﻿using Microsoft.EntityFrameworkCore;
+using ORManagement.Application.DTOs.Audit;
 using ORManagement.Application.Interfaces.Repositories;
 using ORManagement.Infrastructure.Data;
 using ORManagement.Infrastructure.Data.Entities;
@@ -52,5 +53,105 @@ public class AuditRepository : IAuditRepository
 
         await _dbContext.PhiAccessLogs.AddAsync(log);
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<List<AuditLogDto>> GetAuditLogsAsync(
+        int hospitalId,
+        string? entity,
+        string? action,
+        DateTime? fromDate,
+        DateTime? toDate)
+    {
+        var query = _dbContext.AuditLogs
+            .Where(log => log.HospitalId == hospitalId);
+
+        if (!string.IsNullOrWhiteSpace(entity))
+        {
+            query = query.Where(log => log.Entity == entity);
+        }
+
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            query = query.Where(log => log.Action == action);
+        }
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(log => log.CreatedAt >= fromDate.Value.Date);
+        }
+
+        if (toDate.HasValue)
+        {
+            var toExclusive = toDate.Value.Date.AddDays(1);
+            query = query.Where(log => log.CreatedAt < toExclusive);
+        }
+
+        return await query
+            .OrderByDescending(log => log.CreatedAt)
+            .Select(log => new AuditLogDto
+            {
+                AuditId = log.AuditId,
+                HospitalId = log.HospitalId,
+                UserId = log.UserId,
+                RoleName = log.RoleName,
+                Action = log.Action,
+                Entity = log.Entity,
+                EntityId = log.EntityId,
+                OldValue = log.OldValue,
+                NewValue = log.NewValue,
+                Remarks = log.Remarks,
+                IpAddress = log.IpAddress,
+                UserAgent = log.UserAgent,
+                CreatedAt = log.CreatedAt
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<PhiAccessLogDto>> GetPhiAccessLogsAsync(
+        int hospitalId,
+        int? patientId,
+        int? userId,
+        DateTime? fromDate,
+        DateTime? toDate)
+    {
+        var query = _dbContext.PhiAccessLogs
+            .Where(log => log.HospitalId == hospitalId);
+
+        if (patientId.HasValue)
+        {
+            query = query.Where(log => log.PatientId == patientId.Value);
+        }
+
+        if (userId.HasValue)
+        {
+            query = query.Where(log => log.UserId == userId.Value);
+        }
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(log => log.AccessedAt >= fromDate.Value.Date);
+        }
+
+        if (toDate.HasValue)
+        {
+            var toExclusive = toDate.Value.Date.AddDays(1);
+            query = query.Where(log => log.AccessedAt < toExclusive);
+        }
+
+        return await query
+            .OrderByDescending(log => log.AccessedAt)
+            .Select(log => new PhiAccessLogDto
+            {
+                AccessId = log.AccessId,
+                HospitalId = log.HospitalId,
+                UserId = log.UserId,
+                PatientId = log.PatientId,
+                AccessType = log.AccessType,
+                Context = log.Context,
+                IpAddress = log.IpAddress,
+                UserAgent = log.UserAgent,
+                AccessedAt = log.AccessedAt
+            })
+            .ToListAsync();
     }
 }

@@ -23,6 +23,10 @@ public partial class vw_CycleQueue
 
     public string PreferredQuarter { get; set; } = null!;
 
+    public int AvailableDaysMask { get; set; }
+
+    public string AvailableDaysDisplay { get; set; } = null!;
+
     public int CyclesWaited { get; set; }
 
     public DateTime CreatedAt { get; set; }

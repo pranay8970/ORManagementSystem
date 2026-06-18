@@ -218,6 +218,7 @@ public partial class ORManagementDbContext : DbContext
 
             entity.HasIndex(e => new { e.HospitalId, e.RequestStatus }, "IX_ORRequests_Hospital_Status");
 
+            entity.Property(e => e.AvailableDaysMask).HasDefaultValue(31);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.PatientReadiness).HasMaxLength(20);
             entity.Property(e => e.PreferredQuarter).HasMaxLength(10);
@@ -569,6 +570,8 @@ public partial class ORManagementDbContext : DbContext
                             .HasColumnName("ValidTo");
                     }));
 
+            entity.HasIndex(e => e.Email, "UQ_Users_Email").IsUnique();
+
             entity.HasIndex(e => e.Username, "UQ_Users_Username").IsUnique();
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
@@ -635,6 +638,9 @@ public partial class ORManagementDbContext : DbContext
                 .HasNoKey()
                 .ToView("vw_CycleQueue", "scheduling");
 
+            entity.Property(e => e.AvailableDaysDisplay)
+                .HasMaxLength(20)
+                .IsUnicode(false);
             entity.Property(e => e.PatientReadiness).HasMaxLength(20);
             entity.Property(e => e.PreferredQuarter).HasMaxLength(10);
             entity.Property(e => e.Priority).HasMaxLength(20);
