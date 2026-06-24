@@ -24,6 +24,10 @@ export const cancelRequest = (id) => {
   return api.delete(`/requests/${id}`)
 }
 
+export const getRequestCapacitySummary = () => {
+  return api.get(`/requests/capacity-summary`)
+}
+
 export const updateRequestStatus = (id, payload) => {
   return api.put(`/requests/${id}/status`, payload)
 }

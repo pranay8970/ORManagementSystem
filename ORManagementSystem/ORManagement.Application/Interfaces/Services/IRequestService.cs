@@ -13,7 +13,8 @@ public interface IRequestService
     int? cycleId,
     string? ipAddress,
     string? userAgent);
-
+    Task<ServiceResultDto<RequestCapacitySummaryDto>> GetCapacitySummaryAsync(
+    int hospitalId);
     Task<ServiceResultDto<List<OrRequestResponseDto>>> GetMyRequestsAsync(
     int hospitalId,
     int surgeonId,

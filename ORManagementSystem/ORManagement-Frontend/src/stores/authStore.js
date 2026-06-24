@@ -1,17 +1,28 @@
 import { defineStore } from 'pinia'
 import * as authService from '../services/authService'
 
+const extractUser = response => {
+  return (
+    response?.data?.user ||
+    response?.data?.data?.user ||
+    response?.data?.authUser ||
+    response?.data?.data ||
+    response?.data ||
+    null
+  )
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: JSON.parse(sessionStorage.getItem('authUser') || 'null'),
-    isAuthenticated: !!sessionStorage.getItem('authUser'),
+    user: null,
+    isAuthenticated: false,
     loading: false,
-    initialized: !!sessionStorage.getItem('authUser')
+    initialized: false
   }),
 
   getters: {
-    isSurgeon: (state) => state.user?.roleName === 'Surgeon',
-    isScheduler: (state) => state.user?.roleName === 'ORScheduler'
+    isSurgeon: state => state.user?.roleName === 'Surgeon',
+    isScheduler: state => state.user?.roleName === 'ORScheduler'
   },
 
   actions: {
@@ -19,11 +30,20 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
 
       try {
-        const res = await authService.login(data)
+        const loginResponse = await authService.login(data)
 
-        const user = res.data?.user || res.data?.data?.user || res.data?.authUser
+        let user = extractUser(loginResponse)
 
-        if (!user) {
+        /*
+          If login endpoint only sets cookie and does not return user,
+          fetch /auth/me immediately after login.
+        */
+        if (!user || !user.roleName) {
+          const meResponse = await authService.getMe()
+          user = extractUser(meResponse)
+        }
+
+        if (!user || !user.roleName) {
           throw new Error('Login succeeded but user data was not returned.')
         }
 
@@ -31,7 +51,7 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = true
         this.initialized = true
 
-        sessionStorage.setItem('authUser', JSON.stringify(user))
+        return user
       } finally {
         this.loading = false
       }
@@ -41,38 +61,63 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
 
       try {
-        await authService.register(data)
+        return await authService.register(data)
       } finally {
         this.loading = false
       }
     },
 
     async loadUser() {
-      const storedUser = sessionStorage.getItem('authUser')
+      this.loading = true
 
-      if (storedUser) {
-        this.user = JSON.parse(storedUser)
+      try {
+        const response = await authService.getMe()
+        const user = extractUser(response)
+
+        if (!user || !user.roleName) {
+          this.user = null
+          this.isAuthenticated = false
+          return
+        }
+
+        this.user = user
         this.isAuthenticated = true
+      } catch {
+        this.user = null
+        this.isAuthenticated = false
+      } finally {
         this.initialized = true
-        return
+        this.loading = false
       }
+    },
 
-      this.user = null
-      this.isAuthenticated = false
-      this.initialized = true
+    async refreshUser() {
+      try {
+        await authService.refresh()
+        await this.loadUser()
+      } catch {
+        this.user = null
+        this.isAuthenticated = false
+        this.initialized = true
+      }
     },
 
     async logout() {
       try {
         await authService.logout()
       } catch {
-        // ignore logout API failure
+        // Ignore logout API failure. Frontend should still clear local state.
       } finally {
         this.user = null
         this.isAuthenticated = false
         this.initialized = true
-        sessionStorage.removeItem('authUser')
       }
+    },
+
+    clearAuth() {
+      this.user = null
+      this.isAuthenticated = false
+      this.initialized = true
     }
   }
 })

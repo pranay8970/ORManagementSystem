@@ -4,18 +4,15 @@ namespace ORManagement.Application.DTOs.Blocks;
 
 public class UpdateBlockTemplateDto
 {
-    [Required]
-    public int SurgeonId { get; set; }
+    public int? SurgeonId { get; set; }
 
     [Required]
     public int ORRoomId { get; set; }
 
-    [Required]
-    [StringLength(100)]
-    public string Specialty { get; set; } = string.Empty;
+    public string? Specialty { get; set; }
 
-    [Range(1, 7)]
-    public byte DayOfWeek { get; set; }
+    [Required]
+    public int DayOfWeek { get; set; }
 
     [Required]
     public TimeOnly StartTime { get; set; }
@@ -28,5 +25,8 @@ public class UpdateBlockTemplateDto
 
     public DateTime? EffectiveTo { get; set; }
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
+
+    [Required]
+    public string BlockType { get; set; } = "Recurring";
 }

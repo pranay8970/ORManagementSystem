@@ -16,8 +16,8 @@ public class BlockRepository : IBlockRepository
     }
 
     public async Task<int> CreateBlockAllocationAsync(
-    int hospitalId,
-    CreateBlockAllocationDto request)
+        int hospitalId,
+        CreateBlockAllocationDto request)
     {
         var block = new BlockAllocation
         {
@@ -30,7 +30,8 @@ public class BlockRepository : IBlockRepository
             EndTime = request.EndTime,
             BlockType = request.BlockType,
             BlockStatus = "Allocated",
-            Remarks = request.Remarks
+            Remarks = request.Remarks,
+            CreatedAt = DateTime.UtcNow
         };
 
         await _dbContext.BlockAllocations.AddAsync(block);
@@ -38,65 +39,99 @@ public class BlockRepository : IBlockRepository
 
         return block.BlockId;
     }
+
     public async Task<List<BlockTemplateDto>> GetTemplatesAsync(int hospitalId)
     {
-        return await
-            (
-                from template in _dbContext.RecurringBlockTemplates
-                join surgeon in _dbContext.Surgeons on template.SurgeonId equals surgeon.SurgeonId
-                join user in _dbContext.Users on surgeon.UserId equals user.UserId
-                join room in _dbContext.OperatingRooms on template.ORRoomId equals room.ORRoomId
-                where surgeon.HospitalId == hospitalId
-                orderby template.DayOfWeek, template.StartTime
-                select new BlockTemplateDto
-                {
-                    TemplateId = template.TemplateId,
-                    SurgeonId = template.SurgeonId,
-                    ORRoomId = template.ORRoomId,
-                    SurgeonName = user.FullName,
-                    RoomName = room.RoomName,
-                    Specialty = template.Specialty,
-                    DayOfWeek = template.DayOfWeek,
-                    StartTime = template.StartTime,
-                    EndTime = template.EndTime,
-                    EffectiveFrom = template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
-                    EffectiveTo = template.EffectiveTo.HasValue
-                        ? template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
-                        : null,
-                    IsActive = template.IsActive
-                }
-            )
+        var query =
+            from template in _dbContext.RecurringBlockTemplates
+            join room in _dbContext.OperatingRooms
+                on template.ORRoomId equals room.ORRoomId
+            where room.HospitalId == hospitalId
+            select new
+            {
+                template,
+                room,
+                SurgeonName =
+                    template.SurgeonId == null
+                        ? null
+                        : (
+                            from surgeon in _dbContext.Surgeons
+                            join user in _dbContext.Users
+                                on surgeon.UserId equals user.UserId
+                            where surgeon.SurgeonId == template.SurgeonId
+                                  && surgeon.HospitalId == hospitalId
+                            select user.FullName
+                        ).FirstOrDefault()
+            };
+
+        return await query
+            .OrderBy(item => item.template.DayOfWeek)
+            .ThenBy(item => item.template.StartTime)
+            .Select(item => new BlockTemplateDto
+            {
+                TemplateId = item.template.TemplateId,
+                SurgeonId = item.template.SurgeonId,
+                ORRoomId = item.template.ORRoomId,
+                SurgeonName = item.SurgeonName ?? item.template.BlockType + " Capacity",
+                RoomName = item.room.RoomName,
+                Specialty = item.template.Specialty,
+                DayOfWeek = item.template.DayOfWeek,
+                StartTime = item.template.StartTime,
+                EndTime = item.template.EndTime,
+                EffectiveFrom = item.template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
+                EffectiveTo = item.template.EffectiveTo.HasValue
+                    ? item.template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
+                    : null,
+                IsActive = item.template.IsActive,
+                BlockType = item.template.BlockType
+            })
             .ToListAsync();
     }
 
     public async Task<BlockTemplateDto?> GetTemplateByIdAsync(int hospitalId, int templateId)
     {
-        return await
-            (
-                from template in _dbContext.RecurringBlockTemplates
-                join surgeon in _dbContext.Surgeons on template.SurgeonId equals surgeon.SurgeonId
-                join user in _dbContext.Users on surgeon.UserId equals user.UserId
-                join room in _dbContext.OperatingRooms on template.ORRoomId equals room.ORRoomId
-                where surgeon.HospitalId == hospitalId
-                      && template.TemplateId == templateId
-                select new BlockTemplateDto
-                {
-                    TemplateId = template.TemplateId,
-                    SurgeonId = template.SurgeonId,
-                    ORRoomId = template.ORRoomId,
-                    SurgeonName = user.FullName,
-                    RoomName = room.RoomName,
-                    Specialty = template.Specialty,
-                    DayOfWeek = template.DayOfWeek,
-                    StartTime = template.StartTime,
-                    EndTime = template.EndTime,
-                    EffectiveFrom = template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
-                    EffectiveTo = template.EffectiveTo.HasValue
-                        ? template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
-                        : null,
-                    IsActive = template.IsActive
-                }
-            )
+        var query =
+            from template in _dbContext.RecurringBlockTemplates
+            join room in _dbContext.OperatingRooms
+                on template.ORRoomId equals room.ORRoomId
+            where room.HospitalId == hospitalId
+                  && template.TemplateId == templateId
+            select new
+            {
+                template,
+                room,
+                SurgeonName =
+                    template.SurgeonId == null
+                        ? null
+                        : (
+                            from surgeon in _dbContext.Surgeons
+                            join user in _dbContext.Users
+                                on surgeon.UserId equals user.UserId
+                            where surgeon.SurgeonId == template.SurgeonId
+                                  && surgeon.HospitalId == hospitalId
+                            select user.FullName
+                        ).FirstOrDefault()
+            };
+
+        return await query
+            .Select(item => new BlockTemplateDto
+            {
+                TemplateId = item.template.TemplateId,
+                SurgeonId = item.template.SurgeonId,
+                ORRoomId = item.template.ORRoomId,
+                SurgeonName = item.SurgeonName ?? item.template.BlockType + " Capacity",
+                RoomName = item.room.RoomName,
+                Specialty = item.template.Specialty,
+                DayOfWeek = item.template.DayOfWeek,
+                StartTime = item.template.StartTime,
+                EndTime = item.template.EndTime,
+                EffectiveFrom = item.template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
+                EffectiveTo = item.template.EffectiveTo.HasValue
+                    ? item.template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
+                    : null,
+                IsActive = item.template.IsActive,
+                BlockType = item.template.BlockType
+            })
             .FirstOrDefaultAsync();
     }
 
@@ -104,17 +139,21 @@ public class BlockRepository : IBlockRepository
     {
         var entity = new RecurringBlockTemplate
         {
-            SurgeonId = request.SurgeonId,
+            SurgeonId = request.BlockType == "Recurring"
+                ? request.SurgeonId
+                : null,
             ORRoomId = request.ORRoomId,
-            Specialty = request.Specialty.Trim(),
-            DayOfWeek = request.DayOfWeek,
+            Specialty = request.Specialty,
+            DayOfWeek = (byte)request.DayOfWeek,
             StartTime = request.StartTime,
             EndTime = request.EndTime,
             EffectiveFrom = DateOnly.FromDateTime(request.EffectiveFrom.Date),
             EffectiveTo = request.EffectiveTo.HasValue
                 ? DateOnly.FromDateTime(request.EffectiveTo.Value.Date)
                 : null,
-            IsActive = true
+            IsActive = request.IsActive,
+            BlockType = request.BlockType,
+            DeactivatedAt = request.IsActive ? null : DateTime.UtcNow
         };
 
         await _dbContext.RecurringBlockTemplates.AddAsync(entity);
@@ -131,9 +170,10 @@ public class BlockRepository : IBlockRepository
         var entity = await
             (
                 from template in _dbContext.RecurringBlockTemplates
-                join surgeon in _dbContext.Surgeons on template.SurgeonId equals surgeon.SurgeonId
+                join room in _dbContext.OperatingRooms
+                    on template.ORRoomId equals room.ORRoomId
                 where template.TemplateId == templateId
-                      && surgeon.HospitalId == hospitalId
+                      && room.HospitalId == hospitalId
                 select template
             )
             .FirstOrDefaultAsync();
@@ -143,10 +183,12 @@ public class BlockRepository : IBlockRepository
             return false;
         }
 
-        entity.SurgeonId = request.SurgeonId;
+        entity.SurgeonId = request.BlockType == "Recurring"
+            ? request.SurgeonId
+            : null;
         entity.ORRoomId = request.ORRoomId;
-        entity.Specialty = request.Specialty.Trim();
-        entity.DayOfWeek = request.DayOfWeek;
+        entity.Specialty = request.Specialty;
+        entity.DayOfWeek = (byte)request.DayOfWeek;
         entity.StartTime = request.StartTime;
         entity.EndTime = request.EndTime;
         entity.EffectiveFrom = DateOnly.FromDateTime(request.EffectiveFrom.Date);
@@ -154,6 +196,7 @@ public class BlockRepository : IBlockRepository
             ? DateOnly.FromDateTime(request.EffectiveTo.Value.Date)
             : null;
         entity.IsActive = request.IsActive;
+        entity.BlockType = request.BlockType;
         entity.DeactivatedAt = request.IsActive ? null : DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
@@ -166,9 +209,10 @@ public class BlockRepository : IBlockRepository
         var entity = await
             (
                 from template in _dbContext.RecurringBlockTemplates
-                join surgeon in _dbContext.Surgeons on template.SurgeonId equals surgeon.SurgeonId
+                join room in _dbContext.OperatingRooms
+                    on template.ORRoomId equals room.ORRoomId
                 where template.TemplateId == templateId
-                      && surgeon.HospitalId == hospitalId
+                      && room.HospitalId == hospitalId
                 select template
             )
             .FirstOrDefaultAsync();
@@ -237,23 +281,26 @@ public class BlockRepository : IBlockRepository
         int? roomId)
     {
         var query =
-    from block in _dbContext.BlockAllocations
-    join room in _dbContext.OperatingRooms
-        on block.ORRoomId equals room.ORRoomId
-    join surgeon in _dbContext.Surgeons
-        on block.SurgeonId equals surgeon.SurgeonId into surgeonJoin
-    from surgeon in surgeonJoin.DefaultIfEmpty()
-    join user in _dbContext.Users
-        on surgeon != null ? surgeon.UserId : 0 equals user.UserId into userJoin
-    from user in userJoin.DefaultIfEmpty()
-    where block.HospitalId == hospitalId
-    select new
-    {
-        block,
-        room,
-        surgeon,
-        user
-    };
+            from block in _dbContext.BlockAllocations
+            join room in _dbContext.OperatingRooms
+                on block.ORRoomId equals room.ORRoomId
+            where block.HospitalId == hospitalId
+            select new
+            {
+                block,
+                room,
+                SurgeonName =
+                    block.SurgeonId == null
+                        ? null
+                        : (
+                            from surgeon in _dbContext.Surgeons
+                            join user in _dbContext.Users
+                                on surgeon.UserId equals user.UserId
+                            where surgeon.SurgeonId == block.SurgeonId
+                                  && surgeon.HospitalId == hospitalId
+                            select user.FullName
+                        ).FirstOrDefault()
+            };
 
         if (fromDate.HasValue)
         {
@@ -280,24 +327,23 @@ public class BlockRepository : IBlockRepository
         return await query
             .OrderBy(item => item.block.BlockDate)
             .ThenBy(item => item.block.StartTime)
-           .Select(item => new BlockAllocationDto
-           {
-               BlockId = item.block.BlockId,
-               HospitalId = item.block.HospitalId,
-               TemplateId = item.block.TemplateId,
-               SurgeonId = item.block.SurgeonId,
-               SurgeonName = item.user != null
-        ? item.user.FullName
-        : item.block.BlockType + " Capacity",
-               ORRoomId = item.room.ORRoomId,
-               RoomName = item.room.RoomName,
-               BlockDate = item.block.BlockDate.ToDateTime(TimeOnly.MinValue),
-               StartTime = item.block.StartTime,
-               EndTime = item.block.EndTime,
-               BlockType = item.block.BlockType,
-               BlockStatus = item.block.BlockStatus,
-               Remarks = item.block.Remarks
-           })
+            .ThenBy(item => item.block.BlockId)
+            .Select(item => new BlockAllocationDto
+            {
+                BlockId = item.block.BlockId,
+                HospitalId = item.block.HospitalId,
+                TemplateId = item.block.TemplateId,
+                SurgeonId = item.block.SurgeonId,
+                SurgeonName = item.SurgeonName ?? item.block.BlockType + " Capacity",
+                ORRoomId = item.room.ORRoomId,
+                RoomName = item.room.RoomName,
+                BlockDate = item.block.BlockDate.ToDateTime(TimeOnly.MinValue),
+                StartTime = item.block.StartTime,
+                EndTime = item.block.EndTime,
+                BlockType = item.block.BlockType,
+                BlockStatus = item.block.BlockStatus,
+                Remarks = item.block.Remarks
+            })
             .ToListAsync();
     }
 
@@ -342,7 +388,7 @@ public class BlockRepository : IBlockRepository
 
     public async Task<int> CreateBlockAsync(
         int hospitalId,
-        int surgeonId,
+        int? surgeonId,
         int roomId,
         int? templateId,
         DateTime blockDate,
@@ -356,7 +402,9 @@ public class BlockRepository : IBlockRepository
         var entity = new BlockAllocation
         {
             HospitalId = hospitalId,
-            SurgeonId = surgeonId,
+            SurgeonId = blockType == "Recurring" || blockType == "AdHoc"
+                ? surgeonId
+                : null,
             ORRoomId = roomId,
             TemplateId = templateId,
             BlockDate = DateOnly.FromDateTime(blockDate.Date),
@@ -391,11 +439,14 @@ public class BlockRepository : IBlockRepository
             return false;
         }
 
-        entity.SurgeonId = request.SurgeonId;
+        entity.SurgeonId = request.BlockType == "Recurring" || request.BlockType == "AdHoc"
+            ? request.SurgeonId
+            : null;
         entity.ORRoomId = request.ORRoomId;
         entity.BlockDate = DateOnly.FromDateTime(request.BlockDate.Date);
         entity.StartTime = request.StartTime;
         entity.EndTime = request.EndTime;
+        entity.BlockType = request.BlockType;
         entity.BlockStatus = request.BlockStatus;
         entity.Remarks = request.Remarks;
         entity.ModifiedByUserId = modifiedByUserId;
@@ -472,28 +523,31 @@ public class BlockRepository : IBlockRepository
 
     public async Task<List<BlockTemplateGenerationDto>> GetActiveTemplatesForGenerationAsync(int hospitalId)
     {
-        return await
-            (
-                from template in _dbContext.RecurringBlockTemplates
-                join surgeon in _dbContext.Surgeons on template.SurgeonId equals surgeon.SurgeonId
-                where surgeon.HospitalId == hospitalId
-                      && template.IsActive
-                select new BlockTemplateGenerationDto
-                {
-                    TemplateId = template.TemplateId,
-                    SurgeonId = template.SurgeonId,
-                    RoomId = template.ORRoomId,
-                    Specialty = template.Specialty,
-                    DayOfWeek = template.DayOfWeek,
-                    StartTime = template.StartTime,
-                    EndTime = template.EndTime,
-                    EffectiveFrom = template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
-                    EffectiveTo = template.EffectiveTo.HasValue
-                        ? template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
-                        : null
-                }
-            )
-            .ToListAsync();
+        var query =
+            from template in _dbContext.RecurringBlockTemplates
+            join room in _dbContext.OperatingRooms
+                on template.ORRoomId equals room.ORRoomId
+            where room.HospitalId == hospitalId
+                  && template.IsActive
+            select new BlockTemplateGenerationDto
+            {
+                TemplateId = template.TemplateId,
+                SurgeonId = template.BlockType == "Recurring"
+                    ? template.SurgeonId
+                    : null,
+                RoomId = template.ORRoomId,
+                Specialty = template.Specialty,
+                DayOfWeek = template.DayOfWeek,
+                StartTime = template.StartTime,
+                EndTime = template.EndTime,
+                EffectiveFrom = template.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
+                EffectiveTo = template.EffectiveTo.HasValue
+                    ? template.EffectiveTo.Value.ToDateTime(TimeOnly.MinValue)
+                    : null,
+                BlockType = template.BlockType
+            };
+
+        return await query.ToListAsync();
     }
 
     public async Task<bool> IsTemplateExceptionAsync(int templateId, DateTime date)
@@ -514,6 +568,7 @@ public class BlockRepository : IBlockRepository
             .AnyAsync(block =>
                 block.ORRoomId == roomId &&
                 block.BlockDate == date &&
-                block.StartTime == startTime);
+                block.StartTime == startTime &&
+                block.BlockStatus != "Cancelled");
     }
 }

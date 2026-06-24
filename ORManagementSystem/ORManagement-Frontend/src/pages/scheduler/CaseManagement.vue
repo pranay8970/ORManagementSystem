@@ -11,6 +11,12 @@ import { getBlocks } from '../../services/blockService'
 import { formatDate, formatDateTime, formatTime } from '../../utils/formatters'
 import { showToast } from '../../utils/toast'
 
+defineProps({
+  embedded: {
+    type: Boolean,
+    default: false
+  }
+})
 const loading = ref(false)
 const saving = ref(false)
 
@@ -252,10 +258,11 @@ onMounted(async () => {
 <template>
   <div>
     <PageHeader
-      title="Case Management"
-      subtitle="Schedule, update, start, complete, and cancel surgical cases"
-      icon="bi-clipboard2-pulse"
-    />
+  v-if="!embedded"
+  title="Case Management"
+  subtitle="Schedule and manage surgical cases"
+  icon="bi-clipboard2-pulse"
+/>
 
     <!-- Create case -->
     <div class="page-card mb-4">

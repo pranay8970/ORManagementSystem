@@ -203,7 +203,125 @@ public class RequestRepository : IRequestRepository
 
         return true;
     }
+    public async Task<RequestCapacitySummaryDto> GetCapacitySummaryAsync(int hospitalId)
+    {
+        const decimal defaultSchedulingHours = 100m;
 
+        var settingValue = await _dbContext.SystemSettings
+            .Where(setting =>
+                setting.SettingKey == "DefaultWeeklySchedulingHours" &&
+                (setting.HospitalId == hospitalId || setting.HospitalId == null))
+            .OrderByDescending(setting => setting.HospitalId == hospitalId)
+            .Select(setting => setting.SettingValue)
+            .FirstOrDefaultAsync();
+
+        var schedulingHourCapacity = defaultSchedulingHours;
+
+        if (decimal.TryParse(settingValue, out var parsedHours) && parsedHours > 0)
+        {
+            schedulingHourCapacity = parsedHours;
+        }
+
+        var currentCycle = await _dbContext.SchedulingCycles
+            .Where(cycle =>
+                cycle.HospitalId == hospitalId &&
+                cycle.CycleStatus == "Open")
+            .OrderBy(cycle => cycle.WeekStartDate)
+            .FirstOrDefaultAsync();
+
+        var allocatedMinutesQuery = _dbContext.ORRequests
+            .Where(request =>
+                request.HospitalId == hospitalId &&
+                (request.RequestStatus == "Approved" ||
+                 request.RequestStatus == "Scheduled"));
+
+        if (currentCycle is not null)
+        {
+            allocatedMinutesQuery = allocatedMinutesQuery
+                .Where(request =>
+                    request.CycleId == currentCycle.CycleId ||
+                    request.OriginalCycleId == currentCycle.CycleId);
+        }
+
+        var allocatedMinutes = await allocatedMinutesQuery
+            .SumAsync(request => (int?)request.EstimatedDurationMin) ?? 0;
+
+        var allocatedHourCapacity = Math.Round(allocatedMinutes / 60m, 2);
+        var remainingHourCapacity = Math.Round(
+            Math.Max(schedulingHourCapacity - allocatedHourCapacity, 0),
+            2);
+
+        var topRecurringDoctors = new List<TopDoctorRecurringCapacityDto>();
+
+        if (currentCycle is not null)
+        {
+            var hardcodedTopSurgeonIds = new List<int>
+    {
+        10,
+        3
+    };
+
+            var startDate = currentCycle.WeekStartDate;
+            var endDate = currentCycle.WeekEndDate;
+
+            var topSurgeons = await (
+                from surgeon in _dbContext.Surgeons
+                join user in _dbContext.Users
+                    on surgeon.UserId equals user.UserId
+                where surgeon.HospitalId == hospitalId
+                      && hardcodedTopSurgeonIds.Contains(surgeon.SurgeonId)
+                select new
+                {
+                    surgeon.SurgeonId,
+                    SurgeonName = user.FullName
+                })
+                .ToListAsync();
+
+            var recurringBlocks = await _dbContext.BlockAllocations
+                .Where(block =>
+                    block.HospitalId == hospitalId &&
+                    block.BlockType == "Recurring" &&
+                    block.BlockStatus != "Cancelled" &&
+                    block.BlockDate >= startDate &&
+                    block.BlockDate <= endDate &&
+                    block.SurgeonId.HasValue &&
+                    hardcodedTopSurgeonIds.Contains(block.SurgeonId.Value))
+                .Select(block => new
+                {
+                    SurgeonId = block.SurgeonId!.Value,
+                    block.StartTime,
+                    block.EndTime
+                })
+                .ToListAsync();
+
+            topRecurringDoctors = hardcodedTopSurgeonIds
+                .Select(surgeonId =>
+                {
+                    var surgeon = topSurgeons.FirstOrDefault(item => item.SurgeonId == surgeonId);
+
+                    var recurringMinutes = recurringBlocks
+                        .Where(block => block.SurgeonId == surgeonId)
+                        .Sum(block =>
+                            (decimal)(block.EndTime.ToTimeSpan() - block.StartTime.ToTimeSpan()).TotalMinutes);
+
+                    return new TopDoctorRecurringCapacityDto
+                    {
+                        SurgeonId = surgeonId,
+                        SurgeonName = surgeon?.SurgeonName ?? $"Surgeon #{surgeonId}",
+                        RecurringHours = Math.Round(recurringMinutes / 60m, 2)
+                    };
+                })
+                .ToList();
+        }
+
+        return new RequestCapacitySummaryDto
+        {
+            SchedulingHourCapacity = schedulingHourCapacity,
+            AllocatedHourCapacity = allocatedHourCapacity,
+            RemainingHourCapacity = remainingHourCapacity,
+            TopRecurringDoctors = topRecurringDoctors
+        };
+    }
     public async Task<bool> DeletePendingRequestAsync(
         int hospitalId,
         int requestId,

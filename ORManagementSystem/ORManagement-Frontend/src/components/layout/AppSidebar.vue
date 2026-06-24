@@ -52,7 +52,7 @@ const schedulerLinks = [
     to: '/app/scheduler/rooms-calendar'
   },
   {
-    label: 'Request Queue',
+    label: 'Request Approval',
     icon: 'bi-inbox',
     to: '/app/scheduler/requests'
   },
@@ -60,11 +60,6 @@ const schedulerLinks = [
     label: 'Cycles',
     icon: 'bi-arrow-repeat',
     to: '/app/scheduler/cycles'
-  },
-  {
-    label: 'Cases',
-    icon: 'bi-clipboard2-pulse',
-    to: '/app/scheduler/cases'
   },
   {
     label: 'Blocks',

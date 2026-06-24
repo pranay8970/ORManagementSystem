@@ -7,11 +7,11 @@ public partial class RecurringBlockTemplate
 {
     public int TemplateId { get; set; }
 
-    public int SurgeonId { get; set; }
+    public int? SurgeonId { get; set; }
 
     public int ORRoomId { get; set; }
 
-    public string Specialty { get; set; } = null!;
+    public string? Specialty { get; set; }
 
     public byte DayOfWeek { get; set; }
 
@@ -27,11 +27,13 @@ public partial class RecurringBlockTemplate
 
     public DateTime? DeactivatedAt { get; set; }
 
+    public string BlockType { get; set; } = null!;
+
     public virtual ICollection<BlockAllocation> BlockAllocations { get; set; } = new List<BlockAllocation>();
 
     public virtual ICollection<BlockException> BlockExceptions { get; set; } = new List<BlockException>();
 
     public virtual OperatingRoom ORRoom { get; set; } = null!;
 
-    public virtual Surgeon Surgeon { get; set; } = null!;
+    public virtual Surgeon? Surgeon { get; set; }
 }

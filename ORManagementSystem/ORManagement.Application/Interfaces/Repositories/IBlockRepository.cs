@@ -35,17 +35,17 @@ public interface IBlockRepository
         int? excludeBlockId = null);
 
     Task<int> CreateBlockAsync(
-        int hospitalId,
-        int surgeonId,
-        int roomId,
-        int? templateId,
-        DateTime blockDate,
-        TimeOnly startTime,
-        TimeOnly endTime,
-        string blockType,
-        string blockStatus,
-        string? remarks,
-        int modifiedByUserId);
+    int hospitalId,
+    int? surgeonId,
+    int roomId,
+    int? templateId,
+    DateTime blockDate,
+    TimeOnly startTime,
+    TimeOnly endTime,
+    string blockType,
+    string blockStatus,
+    string? remarks,
+    int modifiedByUserId);
 
     Task<bool> UpdateBlockAsync(
         int hospitalId,

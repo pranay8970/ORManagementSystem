@@ -14,10 +14,12 @@ api.interceptors.response.use(
       const isAuthEndpoint =
         url.includes('/auth/login') ||
         url.includes('/auth/register') ||
-        url.includes('/auth/me')
+        url.includes('/auth/me') ||
+        url.includes('/auth/refresh') ||
+        url.includes('/auth/logout')
 
       if (!isAuthEndpoint) {
-        sessionStorage.removeItem('authUser')
+        console.warn('Unauthorized API request:', url)
       }
     }
 

@@ -144,7 +144,13 @@ public class RequestService : IRequestService
 
         return ServiceResultDto<OrRequestResponseDto>.Ok(request);
     }
+    public async Task<ServiceResultDto<RequestCapacitySummaryDto>> GetCapacitySummaryAsync(
+    int hospitalId)
+    {
+        var summary = await _requestRepository.GetCapacitySummaryAsync(hospitalId);
 
+        return ServiceResultDto<RequestCapacitySummaryDto>.Ok(summary);
+    }
     public async Task<ServiceResultDto<int>> CreateRequestAsync(
         int hospitalId,
         int surgeonId,

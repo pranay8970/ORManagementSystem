@@ -20,7 +20,8 @@ public class SettingsService : ISettingsService
         "EmergencyBufferQ1Min",
         "EmergencyBufferQ2Min",
         "RecurringWeeksAhead",
-        "StarvationCycleThreshold"
+        "StarvationCycleThreshold",
+        "DefaultWeeklySchedulingHours"
     };
 
     public SettingsService(

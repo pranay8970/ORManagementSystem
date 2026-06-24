@@ -43,17 +43,8 @@ const selectedTemplate = ref(null)
 const selectedBlock = ref(null)
 const selectedReleaseBlock = ref(null)
 const selectedExceptionTemplate = ref(null)
-const showCreateBlockModal = ref(false)
 
-const createBlockForm = ref({
-  surgeonId: '',
-  orRoomId: '',
-  blockDate: '2026-06-22',
-  startTime: '13:00',
-  endTime: '17:00',
-  blockType: 'Open',
-  remarks: ''
-})
+
 const blockFilters = ref({
   fromDate: '2026-06-22',
   toDate: '2026-06-26',
@@ -62,6 +53,7 @@ const blockFilters = ref({
 })
 
 const templateForm = ref({
+  blockType: 'Recurring',
   surgeonId: '',
   orRoomId: '',
   specialty: '',
@@ -129,78 +121,7 @@ const loadTemplates = async () => {
   const response = await getBlockTemplates()
   templates.value = response.data || []
 }
-const openCreateBlock = () => {
-  createBlockForm.value = {
-    surgeonId: '',
-    orRoomId: '',
-    blockDate: '2026-06-22',
-    startTime: '13:00',
-    endTime: '17:00',
-    blockType: 'Open',
-    remarks: ''
-  }
 
-  showCreateBlockModal.value = true
-}
-
-const closeCreateBlock = () => {
-  showCreateBlockModal.value = false
-}
-const submitCreateBlock = async () => {
-  if (!createBlockForm.value.orRoomId) {
-    showToast('Room is required.', 'warning')
-    return
-  }
-
-  if (!createBlockForm.value.blockDate) {
-    showToast('Block date is required.', 'warning')
-    return
-  }
-
-  if (!createBlockForm.value.startTime || !createBlockForm.value.endTime) {
-    showToast('Start and end time are required.', 'warning')
-    return
-  }
-
-  if (
-    createBlockForm.value.blockType === 'AdHoc' &&
-    !createBlockForm.value.surgeonId
-  ) {
-    showToast('Surgeon is required for AdHoc blocks.', 'warning')
-    return
-  }
-
-  saving.value = true
-
-  try {
-    const payload = {
-      surgeonId: ['Open', 'Emergency'].includes(createBlockForm.value.blockType)
-        ? null
-        : Number(createBlockForm.value.surgeonId),
-      orRoomId: Number(createBlockForm.value.orRoomId),
-      blockDate: createBlockForm.value.blockDate,
-      startTime: normalizeTimeForApi(createBlockForm.value.startTime),
-      endTime: normalizeTimeForApi(createBlockForm.value.endTime),
-      blockType: createBlockForm.value.blockType,
-      remarks: createBlockForm.value.remarks
-    }
-
-    await createBlock(payload)
-
-    showToast('Block created successfully.', 'success')
-    closeCreateBlock()
-    await loadBlocks()
-  } catch (err) {
-    const message =
-      err?.response?.data?.message ||
-      err?.response?.data?.title ||
-      'Failed to create block.'
-
-    showToast(message, 'error')
-  } finally {
-    saving.value = false
-  }
-}
 const loadBlocks = async () => {
   const params = {}
 
@@ -235,6 +156,7 @@ const resetTemplateForm = () => {
   selectedTemplate.value = null
 
   templateForm.value = {
+    blockType: 'Recurring',
     surgeonId: '',
     orRoomId: '',
     specialty: '',
@@ -258,9 +180,10 @@ const openEditTemplate = template => {
   selectedTemplate.value = template
 
   templateForm.value = {
-    surgeonId: template.surgeonId,
+    blockType: template.blockType || 'Recurring',
+    surgeonId: template.surgeonId || '',
     orRoomId: template.orRoomId,
-    specialty: template.specialty,
+    specialty: template.specialty || '',
     dayOfWeek: template.dayOfWeek,
     startTime: formatTime(template.startTime),
     endTime: formatTime(template.endTime),
@@ -273,23 +196,40 @@ const openEditTemplate = template => {
 }
 
 const submitTemplate = async () => {
-  if (!templateForm.value.surgeonId || !templateForm.value.orRoomId) {
-    showToast('Surgeon and room are required.', 'warning')
+  if (!templateForm.value.orRoomId) {
+    showToast('Room is required.', 'warning')
     return
   }
 
-  if (!templateForm.value.specialty.trim()) {
-    showToast('Specialty is required.', 'warning')
+  if (
+    templateForm.value.blockType === 'Recurring' &&
+    !templateForm.value.surgeonId
+  ) {
+    showToast('Surgeon is required for recurring templates.', 'warning')
+    return
+  }
+
+  if (!templateForm.value.startTime || !templateForm.value.endTime) {
+    showToast('Start and end time are required.', 'warning')
     return
   }
 
   saving.value = true
 
   try {
+    const blockType = templateForm.value.blockType
+
     const payload = {
-      surgeonId: Number(templateForm.value.surgeonId),
+      blockType,
+      surgeonId: blockType === 'Recurring'
+        ? Number(templateForm.value.surgeonId)
+        : null,
       orRoomId: Number(templateForm.value.orRoomId),
-      specialty: templateForm.value.specialty.trim(),
+      specialty:
+        templateForm.value.specialty?.trim() ||
+        (blockType === 'Recurring'
+          ? 'Recurring Capacity'
+          : `${blockType} Capacity`),
       dayOfWeek: Number(templateForm.value.dayOfWeek),
       startTime: normalizeTimeForApi(templateForm.value.startTime),
       endTime: normalizeTimeForApi(templateForm.value.endTime),
@@ -564,7 +504,7 @@ onMounted(loadPage)
   <div>
     <PageHeader
       title="Block Management"
-      subtitle="Manage templates, generate blocks, and release unused OR time"
+      subtitle="Manage capacity templates, generate blocks, and release unused OR time"
       icon="bi-grid-3x3-gap"
     />
 
@@ -591,26 +531,10 @@ onMounted(loadPage)
             Templates
           </button>
         </li>
-
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            :class="{ active: activeTab === 'generate' }"
-            @click="activeTab = 'generate'"
-          >
-            Generate
-          </button>
-        </li>
       </ul>
 
       <!-- Blocks Tab -->
       <div v-if="activeTab === 'blocks'">
-        <div class="d-flex justify-content-end mb-3">
-  <button class="btn btn-primary" @click="openCreateBlock">
-    <i class="bi bi-plus-circle me-1"></i>
-    Create One-Time Block
-  </button>
-</div>
         <div class="page-card mb-4">
           <div class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -680,7 +604,7 @@ onMounted(loadPage)
               <thead>
                 <tr>
                   <th>Block</th>
-                  <th>Surgeon</th>
+                  <th>Surgeon / Capacity</th>
                   <th>Room</th>
                   <th>Date</th>
                   <th>Time</th>
@@ -693,16 +617,36 @@ onMounted(loadPage)
               <tbody>
                 <tr v-for="block in blocks" :key="block.blockId">
                   <td>#{{ block.blockId }}</td>
+
                   <td>
-  {{ block.surgeonName || `${block.blockType} Capacity` }}
-</td>
+                    {{ block.surgeonName || `${block.blockType} Capacity` }}
+                  </td>
+
                   <td>{{ block.roomName }}</td>
                   <td>{{ formatDate(block.blockDate) }}</td>
-                  <td>{{ formatTime(block.startTime) }} - {{ formatTime(block.endTime) }}</td>
-                  <td>{{ block.blockType }}</td>
+                  <td>
+                    {{ formatTime(block.startTime) }} -
+                    {{ formatTime(block.endTime) }}
+                  </td>
+
+                  <td>
+                    <span
+                      class="badge"
+                      :class="{
+                        'bg-primary': block.blockType === 'Recurring',
+                        'bg-success': block.blockType === 'Open',
+                        'bg-danger': block.blockType === 'Emergency',
+                        'bg-warning text-dark': block.blockType === 'AdHoc'
+                      }"
+                    >
+                      {{ block.blockType }}
+                    </span>
+                  </td>
+
                   <td>
                     <StatusBadge :status="block.blockStatus" />
                   </td>
+
                   <td class="text-end">
                     <button
                       class="btn btn-sm btn-outline-primary me-2"
@@ -712,16 +656,16 @@ onMounted(loadPage)
                     </button>
 
                     <button
-  class="btn btn-sm btn-outline-success me-2"
-  :disabled="
-    block.blockStatus === 'Released' ||
-    block.blockStatus === 'Cancelled' ||
-    block.blockType === 'Emergency'
-  "
-  @click="openReleaseBlock(block)"
->
-  Release
-</button>
+                      class="btn btn-sm btn-outline-success me-2"
+                      :disabled="
+                        block.blockStatus === 'Released' ||
+                        block.blockStatus === 'Cancelled' ||
+                        block.blockType === 'Emergency'
+                      "
+                      @click="openReleaseBlock(block)"
+                    >
+                      Release
+                    </button>
 
                     <button
                       class="btn btn-sm btn-outline-danger"
@@ -740,6 +684,44 @@ onMounted(loadPage)
 
       <!-- Templates Tab -->
       <div v-if="activeTab === 'templates'">
+        <div class="page-card mb-4">
+          <h5 class="mb-3">Generate Blocks From Templates</h5>
+
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label">From Date</label>
+              <input
+                v-model="generateForm.fromDate"
+                type="date"
+                class="form-control"
+              />
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">To Date</label>
+              <input
+                v-model="generateForm.toDate"
+                type="date"
+                class="form-control"
+              />
+            </div>
+
+            <div class="col-md-4">
+              <button
+                class="btn btn-primary w-100"
+                :disabled="saving"
+                @click="submitGenerateBlocks"
+              >
+                <span
+                  v-if="saving"
+                  class="spinner-border spinner-border-sm me-2"
+                ></span>
+                Generate Blocks
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex justify-content-end mb-3">
           <button class="btn btn-primary" @click="openCreateTemplate">
             <i class="bi bi-plus-circle me-1"></i>
@@ -751,7 +733,7 @@ onMounted(loadPage)
           <EmptyState
             v-if="templates.length === 0"
             title="No templates"
-            message="No recurring block templates were found."
+            message="No capacity templates were found."
             icon="bi-calendar-x"
           />
 
@@ -760,9 +742,10 @@ onMounted(loadPage)
               <thead>
                 <tr>
                   <th>Template</th>
-                  <th>Surgeon</th>
+                  <th>Type</th>
+                  <th>Surgeon / Capacity</th>
                   <th>Room</th>
-                  <th>Specialty</th>
+                  <th>Specialty / Label</th>
                   <th>Day</th>
                   <th>Time</th>
                   <th>Effective</th>
@@ -774,17 +757,40 @@ onMounted(loadPage)
               <tbody>
                 <tr v-for="template in templates" :key="template.templateId">
                   <td>#{{ template.templateId }}</td>
-                  <td>{{ template.surgeonName }}</td>
+
+                  <td>
+                    <span
+                      class="badge"
+                      :class="{
+                        'bg-primary': template.blockType === 'Recurring',
+                        'bg-success': template.blockType === 'Open',
+                        'bg-danger': template.blockType === 'Emergency'
+                      }"
+                    >
+                      {{ template.blockType }}
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ template.surgeonName || `${template.blockType} Capacity` }}
+                  </td>
+
                   <td>{{ template.roomName }}</td>
-                  <td>{{ template.specialty }}</td>
+                  <td>{{ template.specialty || `${template.blockType} Capacity` }}</td>
                   <td>{{ dayNames[template.dayOfWeek] }}</td>
-                  <td>{{ formatTime(template.startTime) }} - {{ formatTime(template.endTime) }}</td>
+
+                  <td>
+                    {{ formatTime(template.startTime) }} -
+                    {{ formatTime(template.endTime) }}
+                  </td>
+
                   <td>
                     {{ formatDate(template.effectiveFrom) }}
                     <span v-if="template.effectiveTo">
                       to {{ formatDate(template.effectiveTo) }}
                     </span>
                   </td>
+
                   <td>
                     <span
                       class="badge"
@@ -793,6 +799,7 @@ onMounted(loadPage)
                       {{ template.isActive ? 'Active' : 'Inactive' }}
                     </span>
                   </td>
+
                   <td class="text-end">
                     <button
                       class="btn btn-sm btn-outline-primary me-2"
@@ -821,45 +828,6 @@ onMounted(loadPage)
           </div>
         </div>
       </div>
-
-      <!-- Generate Tab -->
-      <div v-if="activeTab === 'generate'" class="page-card">
-        <h5 class="mb-3">Generate Blocks</h5>
-
-        <div class="row g-3 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">From Date</label>
-            <input
-              v-model="generateForm.fromDate"
-              type="date"
-              class="form-control"
-            />
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label">To Date</label>
-            <input
-              v-model="generateForm.toDate"
-              type="date"
-              class="form-control"
-            />
-          </div>
-
-          <div class="col-md-4">
-            <button
-              class="btn btn-primary w-100"
-              :disabled="saving"
-              @click="submitGenerateBlocks"
-            >
-              <span
-                v-if="saving"
-                class="spinner-border spinner-border-sm me-2"
-              ></span>
-              Generate Blocks
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Edit Block Modal -->
@@ -871,45 +839,71 @@ onMounted(loadPage)
     >
       <div class="row g-3">
         <div class="col-md-3">
-  <label class="form-label">Block Type</label>
-  <select v-model="blockForm.blockType" class="form-select">
-    <option value="Recurring">Recurring</option>
-    <option value="Open">Open</option>
-    <option value="Emergency">Emergency</option>
-    <option value="AdHoc">AdHoc</option>
-  </select>
-</div>
+          <label class="form-label">Block Type</label>
+          <select v-model="blockForm.blockType" class="form-select">
+            <option value="Recurring">Recurring</option>
+            <option value="Open">Open</option>
+            <option value="Emergency">Emergency</option>
+            <option value="AdHoc">AdHoc</option>
+          </select>
+        </div>
 
-<div
-  v-if="['Recurring', 'AdHoc'].includes(blockForm.blockType)"
-  class="col-md-3"
->
-  <label class="form-label">Surgeon</label>
-  <select v-model="blockForm.surgeonId" class="form-select">
-    <option value="">Select surgeon</option>
-    <option
-      v-for="surgeon in surgeons"
-      :key="surgeon.surgeonId"
-      :value="surgeon.surgeonId"
-    >
-      {{ surgeon.fullName || surgeon.surgeonName }}
-    </option>
-  </select>
-</div>
+        <div
+          v-if="['Recurring', 'AdHoc'].includes(blockForm.blockType)"
+          class="col-md-3"
+        >
+          <label class="form-label">Surgeon</label>
+          <select v-model="blockForm.surgeonId" class="form-select">
+            <option value="">Select surgeon</option>
+            <option
+              v-for="surgeon in surgeons"
+              :key="surgeon.surgeonId"
+              :value="surgeon.surgeonId"
+            >
+              {{ surgeon.fullName || surgeon.surgeonName }}
+            </option>
+          </select>
+        </div>
 
-        <div class="col-md-2">
+        <div class="col-md-3">
+          <label class="form-label">Room</label>
+          <select v-model="blockForm.orRoomId" class="form-select">
+            <option value="">Select room</option>
+            <option
+              v-for="room in rooms"
+              :key="room.orRoomId"
+              :value="room.orRoomId"
+            >
+              {{ room.roomName }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label">Date</label>
-          <input v-model="blockForm.blockDate" type="date" class="form-control" />
+          <input
+            v-model="blockForm.blockDate"
+            type="date"
+            class="form-control"
+          />
         </div>
 
-        <div class="col-md-2">
+        <div class="col-md-3">
           <label class="form-label">Start</label>
-          <input v-model="blockForm.startTime" type="time" class="form-control" />
+          <input
+            v-model="blockForm.startTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
-        <div class="col-md-2">
+        <div class="col-md-3">
           <label class="form-label">End</label>
-          <input v-model="blockForm.endTime" type="time" class="form-control" />
+          <input
+            v-model="blockForm.endTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-3">
@@ -939,7 +933,10 @@ onMounted(loadPage)
           :disabled="saving"
           @click="submitBlockUpdate"
         >
-          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <span
+            v-if="saving"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
           Save Block
         </button>
       </template>
@@ -955,12 +952,20 @@ onMounted(loadPage)
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Release Start</label>
-          <input v-model="releaseForm.startTime" type="time" class="form-control" />
+          <input
+            v-model="releaseForm.startTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-4">
           <label class="form-label">Release End</label>
-          <input v-model="releaseForm.endTime" type="time" class="form-control" />
+          <input
+            v-model="releaseForm.endTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-12">
@@ -979,7 +984,10 @@ onMounted(loadPage)
           :disabled="saving"
           @click="submitReleaseBlock"
         >
-          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <span
+            v-if="saving"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
           Release Time
         </button>
       </template>
@@ -994,6 +1002,18 @@ onMounted(loadPage)
     >
       <div class="row g-3">
         <div class="col-md-3">
+          <label class="form-label">Capacity Type</label>
+          <select v-model="templateForm.blockType" class="form-select">
+            <option value="Recurring">Recurring</option>
+            <option value="Open">Open</option>
+            <option value="Emergency">Emergency</option>
+          </select>
+        </div>
+
+        <div
+          v-if="templateForm.blockType === 'Recurring'"
+          class="col-md-3"
+        >
           <label class="form-label">Surgeon</label>
           <select v-model="templateForm.surgeonId" class="form-select">
             <option value="">Select surgeon</option>
@@ -1022,8 +1042,12 @@ onMounted(loadPage)
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Specialty</label>
-          <input v-model="templateForm.specialty" class="form-control" />
+          <label class="form-label">Specialty / Label</label>
+          <input
+            v-model="templateForm.specialty"
+            class="form-control"
+            :placeholder="`${templateForm.blockType} Capacity`"
+          />
         </div>
 
         <div class="col-md-3">
@@ -1037,22 +1061,38 @@ onMounted(loadPage)
 
         <div class="col-md-2">
           <label class="form-label">Start</label>
-          <input v-model="templateForm.startTime" type="time" class="form-control" />
+          <input
+            v-model="templateForm.startTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-2">
           <label class="form-label">End</label>
-          <input v-model="templateForm.endTime" type="time" class="form-control" />
+          <input
+            v-model="templateForm.endTime"
+            type="time"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-3">
           <label class="form-label">Effective From</label>
-          <input v-model="templateForm.effectiveFrom" type="date" class="form-control" />
+          <input
+            v-model="templateForm.effectiveFrom"
+            type="date"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-3">
           <label class="form-label">Effective To</label>
-          <input v-model="templateForm.effectiveTo" type="date" class="form-control" />
+          <input
+            v-model="templateForm.effectiveTo"
+            type="date"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-2">
@@ -1074,7 +1114,10 @@ onMounted(loadPage)
           :disabled="saving"
           @click="submitTemplate"
         >
-          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <span
+            v-if="saving"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
           {{ selectedTemplate ? 'Update Template' : 'Create Template' }}
         </button>
       </template>
@@ -1090,7 +1133,11 @@ onMounted(loadPage)
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Skip Date</label>
-          <input v-model="exceptionForm.skipDate" type="date" class="form-control" />
+          <input
+            v-model="exceptionForm.skipDate"
+            type="date"
+            class="form-control"
+          />
         </div>
 
         <div class="col-md-8">
@@ -1109,117 +1156,13 @@ onMounted(loadPage)
           :disabled="saving"
           @click="submitException"
         >
-          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <span
+            v-if="saving"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
           Add Exception
         </button>
       </template>
     </AppModal>
-
-    <!-- Create One-Time Block Modal -->
-<AppModal
-  :show="showCreateBlockModal"
-  title="Create One-Time Block"
-  size="lg"
-  @close="closeCreateBlock"
->
-  <div class="row g-3">
-    <div class="col-md-4">
-      <label class="form-label">Block Type</label>
-      <select v-model="createBlockForm.blockType" class="form-select">
-        <option value="Open">Open</option>
-        <option value="Emergency">Emergency</option>
-        <option value="AdHoc">AdHoc</option>
-      </select>
-    </div>
-
-    <div
-      v-if="createBlockForm.blockType === 'AdHoc'"
-      class="col-md-4"
-    >
-      <label class="form-label">Surgeon</label>
-      <select v-model="createBlockForm.surgeonId" class="form-select">
-        <option value="">Select surgeon</option>
-        <option
-          v-for="surgeon in surgeons"
-          :key="surgeon.surgeonId"
-          :value="surgeon.surgeonId"
-        >
-          {{ surgeon.fullName || surgeon.surgeonName }}
-        </option>
-      </select>
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Room</label>
-      <select v-model="createBlockForm.orRoomId" class="form-select">
-        <option value="">Select room</option>
-        <option
-          v-for="room in rooms"
-          :key="room.orRoomId"
-          :value="room.orRoomId"
-        >
-          {{ room.roomName }}
-        </option>
-      </select>
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Date</label>
-      <input
-        v-model="createBlockForm.blockDate"
-        type="date"
-        class="form-control"
-      />
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Start Time</label>
-      <input
-        v-model="createBlockForm.startTime"
-        type="time"
-        class="form-control"
-      />
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">End Time</label>
-      <input
-        v-model="createBlockForm.endTime"
-        type="time"
-        class="form-control"
-      />
-    </div>
-
-    <div class="col-md-12">
-      <label class="form-label">Remarks</label>
-      <input
-        v-model="createBlockForm.remarks"
-        class="form-control"
-        placeholder="Optional remarks"
-      />
-    </div>
-  </div>
-
-  <template #footer>
-    <button
-      class="btn btn-outline-secondary"
-      @click="closeCreateBlock"
-    >
-      Cancel
-    </button>
-
-    <button
-      class="btn btn-primary"
-      :disabled="saving"
-      @click="submitCreateBlock"
-    >
-      <span
-        v-if="saving"
-        class="spinner-border spinner-border-sm me-2"
-      ></span>
-      Create Block
-    </button>
-  </template>
-</AppModal>
   </div>
 </template>

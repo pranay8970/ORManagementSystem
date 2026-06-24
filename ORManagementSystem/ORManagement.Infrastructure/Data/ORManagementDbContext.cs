@@ -372,6 +372,9 @@ public partial class ORManagementDbContext : DbContext
 
             entity.ToTable("RecurringBlockTemplates", "scheduling");
 
+            entity.Property(e => e.BlockType)
+                .HasMaxLength(30)
+                .HasDefaultValue("Recurring");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Specialty).HasMaxLength(100);
 
@@ -382,7 +385,6 @@ public partial class ORManagementDbContext : DbContext
 
             entity.HasOne(d => d.Surgeon).WithMany(p => p.RecurringBlockTemplates)
                 .HasForeignKey(d => d.SurgeonId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_RecurringBlockTemplates_Surgeons");
         });
 

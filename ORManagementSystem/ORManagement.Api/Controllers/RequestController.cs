@@ -303,6 +303,21 @@ public class RequestsController : ApiControllerBase
         });
     }
 
+    [HttpGet("capacity-summary")]
+    [Authorize(Roles = "ORScheduler")]
+    public async Task<IActionResult> GetCapacitySummary()
+    {
+        var result = await _requestService.GetCapacitySummaryAsync(
+            GetCurrentHospitalIdOrDefault());
+
+        if (!result.Success)
+        {
+            return MapError(result);
+        }
+
+        return Ok(result.Data);
+    }
+
     [HttpGet("{id:int}/score")]
     public async Task<IActionResult> GetRequestScore(int id)
     {

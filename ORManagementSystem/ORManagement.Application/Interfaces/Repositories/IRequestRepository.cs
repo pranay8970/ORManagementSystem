@@ -34,6 +34,7 @@ public interface IRequestRepository
         string status,
         string? schedulerRemarks,
         int modifiedByUserId);
+    Task<RequestCapacitySummaryDto> GetCapacitySummaryAsync(int hospitalId);
 
     Task<bool> DeletePendingRequestAsync(
         int hospitalId,
