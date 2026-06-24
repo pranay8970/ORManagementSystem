@@ -18,8 +18,6 @@ public partial class ORManagementDbContext : DbContext
 
     public virtual DbSet<BlockException> BlockExceptions { get; set; }
 
-    public virtual DbSet<DatabasePhiAuditLog> DatabasePhiAuditLogs { get; set; }
-
     public virtual DbSet<ForecastRecommendation> ForecastRecommendations { get; set; }
 
     public virtual DbSet<Hospital> Hospitals { get; set; }
@@ -139,6 +137,7 @@ public partial class ORManagementDbContext : DbContext
 
             entity.HasOne(d => d.Surgeon).WithMany(p => p.BlockAllocations)
                 .HasForeignKey(d => d.SurgeonId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BlockAllocations_Surgeons");
 
             entity.HasOne(d => d.Template).WithMany(p => p.BlockAllocations)
@@ -160,24 +159,6 @@ public partial class ORManagementDbContext : DbContext
                 .HasForeignKey(d => d.TemplateId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BlockExceptions_Templates");
-        });
-
-        modelBuilder.Entity<DatabasePhiAuditLog>(entity =>
-        {
-            entity.HasKey(e => e.DbAuditId);
-
-            entity.ToTable("DatabasePhiAuditLogs", "audit");
-
-            entity.Property(e => e.ActionId).HasMaxLength(10);
-            entity.Property(e => e.ActionName).HasMaxLength(100);
-            entity.Property(e => e.ApplicationName).HasMaxLength(256);
-            entity.Property(e => e.ClientIp).HasMaxLength(100);
-            entity.Property(e => e.DatabaseName).HasMaxLength(256);
-            entity.Property(e => e.DatabasePrincipalName).HasMaxLength(256);
-            entity.Property(e => e.ImportedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.ObjectName).HasMaxLength(256);
-            entity.Property(e => e.SchemaName).HasMaxLength(256);
-            entity.Property(e => e.ServerPrincipalName).HasMaxLength(256);
         });
 
         modelBuilder.Entity<ForecastRecommendation>(entity =>
@@ -590,8 +571,6 @@ public partial class ORManagementDbContext : DbContext
                             .HasPeriodEnd("ValidTo")
                             .HasColumnName("ValidTo");
                     }));
-
-            entity.HasIndex(e => e.Email, "UQ_Users_Email").IsUnique();
 
             entity.HasIndex(e => e.Username, "UQ_Users_Username").IsUnique();
 

@@ -3,12 +3,16 @@ using ORManagement.Application.DTOs.Blocks;
 using ORManagement.Application.Interfaces.Repositories;
 using ORManagement.Infrastructure.Data;
 using ORManagement.Infrastructure.Data.Entities;
+using System;
 
 namespace ORManagement.Infrastructure.Repositories;
 
 public class BlockRepository : IBlockRepository
 {
     private readonly ORManagementDbContext _dbContext;
+
+    // Requirement 3: reusable constant
+    private static readonly int[] AllowedRecurringSurgeons = { 8, 13 };
 
     public BlockRepository(ORManagementDbContext dbContext)
     {
@@ -137,6 +141,17 @@ public class BlockRepository : IBlockRepository
 
     public async Task<int> CreateTemplateAsync(CreateBlockTemplateDto request)
     {
+        // Requirement 4: validation before assigning SurgeonId
+        if (request.BlockType == "Recurring")
+        {
+            // If SurgeonId is null or not one of allowed values, throw
+            var surgeonIdValue = request.SurgeonId ?? -1;
+            if (Array.IndexOf(AllowedRecurringSurgeons, surgeonIdValue) < 0)
+            {
+                throw new InvalidOperationException("Recurring templates may be assigned only to surgeons with IDs: 8, 13.");
+            }
+        }
+
         var entity = new RecurringBlockTemplate
         {
             SurgeonId = request.BlockType == "Recurring"
@@ -181,6 +196,16 @@ public class BlockRepository : IBlockRepository
         if (entity is null)
         {
             return false;
+        }
+
+        // Requirement 4: validation before assigning SurgeonId
+        if (request.BlockType == "Recurring")
+        {
+            var surgeonIdValue = request.SurgeonId ?? -1;
+            if (Array.IndexOf(AllowedRecurringSurgeons, surgeonIdValue) < 0)
+            {
+                throw new InvalidOperationException("Recurring templates may be assigned only to surgeons with IDs: 8, 13.");
+            }
         }
 
         entity.SurgeonId = request.BlockType == "Recurring"

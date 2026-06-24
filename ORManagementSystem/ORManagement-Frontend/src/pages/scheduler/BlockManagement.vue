@@ -100,7 +100,7 @@ const exceptionForm = ref({
   reason: ''
 })
 
-const topRecurringSurgeonIds = [10, 3]
+const topRecurringSurgeonIds = [8, 13]
 
 const topRecurringSurgeons = computed(() => {
   return surgeons.value.filter(surgeon =>
