@@ -108,6 +108,11 @@ public abstract class ApiControllerBase : ControllerBase
             or "SURGEON_REQUIRED_FOR_RECURRING_BLOCK"
             or "BLOCK_SURGEON_MISMATCH"
             or "EMERGENCY_BLOCK_REQUIRED_PRIORITY"
+            or "CASE_DURATION_TOO_SHORT"
+            or "BLOCK_HAS_CASES"
+            or "BLOCK_HAS_RELEASED_SLOTS"
+            or "BLOCK_HAS_UTILIZATION_RECORDS"
+
 
                 => BadRequest(errorResponse),
 

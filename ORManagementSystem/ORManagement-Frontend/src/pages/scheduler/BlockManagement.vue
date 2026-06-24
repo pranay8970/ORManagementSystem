@@ -1,9 +1,12 @@
 <script setup>
+import { computed, onMounted, ref, watch } from 'vue'
 
 import PageHeader from '../../components/common/PageHeader.vue'
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import StatusBadge from '../../components/common/StatusBadge.vue'
+import AppModal from '../../components/common/AppModal.vue'
+
 import {
   getBlockTemplates,
   createBlockTemplate,
@@ -12,15 +15,14 @@ import {
   addBlockException,
   generateBlocks,
   getBlocks,
-  createBlock,
   updateBlock,
   cancelBlock,
   releaseBlock
 } from '../../services/blockService'
+
+import { getRequestCapacitySummary } from '../../services/requestService'
 import { getSurgeons } from '../../services/masterDataService'
 import { getRooms } from '../../services/roomService'
-import { onMounted, ref } from 'vue'
-import AppModal from '../../components/common/AppModal.vue'
 import { formatDate, formatTime } from '../../utils/formatters'
 import { showToast } from '../../utils/toast'
 
@@ -44,7 +46,6 @@ const selectedBlock = ref(null)
 const selectedReleaseBlock = ref(null)
 const selectedExceptionTemplate = ref(null)
 
-
 const blockFilters = ref({
   fromDate: '2026-06-22',
   toDate: '2026-06-26',
@@ -52,14 +53,21 @@ const blockFilters = ref({
   roomId: ''
 })
 
+const capacitySummary = ref({
+  schedulingHourCapacity: 100,
+  allocatedHourCapacity: 0,
+  remainingHourCapacity: 100,
+  topRecurringDoctors: []
+})
+
 const templateForm = ref({
   blockType: 'Recurring',
   surgeonId: '',
   orRoomId: '',
-  specialty: '',
+  specialty: 'Recurring Capacity',
   dayOfWeek: 1,
   startTime: '08:00',
-  endTime: '16:00',
+  endTime: '12:00',
   effectiveFrom: '2026-06-22',
   effectiveTo: '',
   isActive: true
@@ -92,6 +100,22 @@ const exceptionForm = ref({
   reason: ''
 })
 
+const topRecurringSurgeonIds = [10, 3]
+
+const topRecurringSurgeons = computed(() => {
+  return surgeons.value.filter(surgeon =>
+    topRecurringSurgeonIds.includes(Number(surgeon.surgeonId))
+  )
+})
+
+const selectedRecurringDoctorDemand = computed(() => {
+  if (!templateForm.value.surgeonId) return null
+
+  return capacitySummary.value.topRecurringDoctors.find(
+    doctor => Number(doctor.surgeonId) === Number(templateForm.value.surgeonId)
+  ) || null
+})
+
 const dayNames = {
   1: 'Monday',
   2: 'Tuesday',
@@ -100,6 +124,14 @@ const dayNames = {
   5: 'Friday',
   6: 'Saturday',
   7: 'Sunday'
+}
+
+const formatScore = value => {
+  if (value === null || value === undefined) {
+    return '0.00'
+  }
+
+  return Number(value).toFixed(2)
 }
 
 const normalizeTimeForApi = value => {
@@ -115,6 +147,26 @@ const loadSupportingData = async () => {
 
   surgeons.value = surgeonsResponse.data || []
   rooms.value = roomsResponse.data || []
+}
+
+const loadCapacitySummary = async () => {
+  try {
+    const response = await getRequestCapacitySummary()
+
+    capacitySummary.value = {
+      schedulingHourCapacity: response.data?.schedulingHourCapacity ?? 100,
+      allocatedHourCapacity: response.data?.allocatedHourCapacity ?? 0,
+      remainingHourCapacity: response.data?.remainingHourCapacity ?? 100,
+      topRecurringDoctors: response.data?.topRecurringDoctors || []
+    }
+  } catch {
+    capacitySummary.value = {
+      schedulingHourCapacity: 100,
+      allocatedHourCapacity: 0,
+      remainingHourCapacity: 100,
+      topRecurringDoctors: []
+    }
+  }
 }
 
 const loadTemplates = async () => {
@@ -139,7 +191,12 @@ const loadPage = async () => {
 
   try {
     await loadSupportingData()
-    await Promise.all([loadTemplates(), loadBlocks()])
+
+    await Promise.all([
+      loadTemplates(),
+      loadBlocks(),
+      loadCapacitySummary()
+    ])
   } catch (err) {
     const message =
       err?.response?.data?.message ||
@@ -159,10 +216,10 @@ const resetTemplateForm = () => {
     blockType: 'Recurring',
     surgeonId: '',
     orRoomId: '',
-    specialty: '',
+    specialty: 'Recurring Capacity',
     dayOfWeek: 1,
     startTime: '08:00',
-    endTime: '16:00',
+    endTime: '12:00',
     effectiveFrom: '2026-06-22',
     effectiveTo: '',
     isActive: true
@@ -183,7 +240,7 @@ const openEditTemplate = template => {
     blockType: template.blockType || 'Recurring',
     surgeonId: template.surgeonId || '',
     orRoomId: template.orRoomId,
-    specialty: template.specialty || '',
+    specialty: template.specialty || `${template.blockType || 'Recurring'} Capacity`,
     dayOfWeek: template.dayOfWeek,
     startTime: formatTime(template.startTime),
     endTime: formatTime(template.endTime),
@@ -206,6 +263,14 @@ const submitTemplate = async () => {
     !templateForm.value.surgeonId
   ) {
     showToast('Surgeon is required for recurring templates.', 'warning')
+    return
+  }
+
+  if (
+    templateForm.value.blockType === 'Recurring' &&
+    !topRecurringSurgeonIds.includes(Number(templateForm.value.surgeonId))
+  ) {
+    showToast('Recurring templates can only be created for selected top doctors.', 'warning')
     return
   }
 
@@ -247,7 +312,10 @@ const submitTemplate = async () => {
     }
 
     resetTemplateForm()
-    await loadTemplates()
+    await Promise.all([
+      loadTemplates(),
+      loadCapacitySummary()
+    ])
   } catch (err) {
     const message =
       err?.response?.data?.message ||
@@ -344,7 +412,11 @@ const submitGenerateBlocks = async () => {
 
     showToast(`Blocks generated: ${response.data.generatedCount}`, 'success')
     activeTab.value = 'blocks'
-    await loadBlocks()
+
+    await Promise.all([
+      loadBlocks(),
+      loadCapacitySummary()
+    ])
   } catch (err) {
     const message =
       err?.response?.data?.message ||
@@ -437,11 +509,12 @@ const submitBlockUpdate = async () => {
 }
 
 const handleCancelBlock = async block => {
-  if (!confirm(`Cancel block #${block.blockId}?`)) return
+  if (!confirm(`Delete block #${block.blockId}? This will remove it from finalized blocks.`)) return
+  
 
   try {
     await cancelBlock(block.blockId)
-    showToast('Block cancelled successfully.', 'success')
+    showToast('Block deleted successfully.', 'success')
     await loadBlocks()
   } catch (err) {
     const message =
@@ -496,6 +569,31 @@ const submitReleaseBlock = async () => {
     saving.value = false
   }
 }
+
+watch(
+  () => templateForm.value.blockType,
+  blockType => {
+    if (blockType === 'Emergency') {
+      templateForm.value.surgeonId = ''
+      templateForm.value.specialty = 'Emergency Capacity'
+      templateForm.value.startTime = '08:00'
+      templateForm.value.endTime = '10:00'
+    }
+
+    if (blockType === 'Open') {
+      templateForm.value.surgeonId = ''
+      templateForm.value.specialty = 'Open Capacity'
+      templateForm.value.startTime = '10:00'
+      templateForm.value.endTime = '17:00'
+    }
+
+    if (blockType === 'Recurring') {
+      templateForm.value.specialty = 'Recurring Capacity'
+      templateForm.value.startTime = '10:00'
+      templateForm.value.endTime = '16:00'
+    }
+  }
+)
 
 onMounted(loadPage)
 </script>
@@ -624,6 +722,7 @@ onMounted(loadPage)
 
                   <td>{{ block.roomName }}</td>
                   <td>{{ formatDate(block.blockDate) }}</td>
+
                   <td>
                     {{ formatTime(block.startTime) }} -
                     {{ formatTime(block.endTime) }}
@@ -669,10 +768,9 @@ onMounted(loadPage)
 
                     <button
                       class="btn btn-sm btn-outline-danger"
-                      :disabled="block.blockStatus === 'Cancelled'"
                       @click="handleCancelBlock(block)"
                     >
-                      Cancel
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -684,6 +782,50 @@ onMounted(loadPage)
 
       <!-- Templates Tab -->
       <div v-if="activeTab === 'templates'">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="capacity-card">
+              <div class="capacity-label">Open Allocated Hours</div>
+              <div class="capacity-value text-primary">
+                {{ formatScore(capacitySummary.allocatedHourCapacity) }} hrs
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="capacity-card">
+              <div class="capacity-label">Remaining Capacity</div>
+              <div
+                class="capacity-value"
+                :class="capacitySummary.remainingHourCapacity <= 10 ? 'text-danger' : 'text-success'"
+              >
+                {{ formatScore(capacitySummary.remainingHourCapacity) }} hrs
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="capacity-card">
+              <div class="capacity-label">Top Doctor Recurring Demand</div>
+
+              <div v-if="capacitySummary.topRecurringDoctors.length > 0">
+                <div
+                  v-for="doctor in capacitySummary.topRecurringDoctors"
+                  :key="doctor.surgeonId"
+                  class="small d-flex justify-content-between gap-2"
+                >
+                  <span>{{ doctor.surgeonName }}</span>
+                  <strong>{{ formatScore(doctor.recurringHours) }} hrs</strong>
+                </div>
+              </div>
+
+              <div v-else class="text-muted small">
+                No top doctor demand yet
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="page-card mb-4">
           <h5 class="mb-3">Generate Blocks From Templates</h5>
 
@@ -776,7 +918,11 @@ onMounted(loadPage)
                   </td>
 
                   <td>{{ template.roomName }}</td>
-                  <td>{{ template.specialty || `${template.blockType} Capacity` }}</td>
+
+                  <td>
+                    {{ template.specialty || `${template.blockType} Capacity` }}
+                  </td>
+
                   <td>{{ dayNames[template.dayOfWeek] }}</td>
 
                   <td>
@@ -1018,7 +1164,7 @@ onMounted(loadPage)
           <select v-model="templateForm.surgeonId" class="form-select">
             <option value="">Select surgeon</option>
             <option
-              v-for="surgeon in surgeons"
+              v-for="surgeon in topRecurringSurgeons"
               :key="surgeon.surgeonId"
               :value="surgeon.surgeonId"
             >
@@ -1048,6 +1194,37 @@ onMounted(loadPage)
             class="form-control"
             :placeholder="`${templateForm.blockType} Capacity`"
           />
+        </div>
+
+        <div class="col-md-12">
+          <div
+            v-if="templateForm.blockType === 'Open'"
+            class="alert alert-info py-2 mb-0"
+          >
+            Open Allocated Hours:
+            <strong>{{ formatScore(capacitySummary.allocatedHourCapacity) }} hrs</strong>.
+            Create Open templates totaling approximately this amount.
+          </div>
+
+          <div
+            v-else-if="templateForm.blockType === 'Emergency'"
+            class="alert alert-danger py-2 mb-0"
+          >
+            Emergency capacity defaults to
+            <strong>2 hrs/day</strong>
+            using 08:00–10:00. Create one Emergency template for each weekday.
+          </div>
+
+          <div
+            v-else-if="templateForm.blockType === 'Recurring'"
+            class="alert alert-primary py-2 mb-0"
+          >
+            Recurring templates are limited to selected doctors.
+            <span v-if="selectedRecurringDoctorDemand">
+              Selected doctor demand:
+              <strong>{{ formatScore(selectedRecurringDoctorDemand.recurringHours) }} hrs</strong>.
+            </span>
+          </div>
         </div>
 
         <div class="col-md-3">
@@ -1166,3 +1343,27 @@ onMounted(loadPage)
     </AppModal>
   </div>
 </template>
+
+<style scoped>
+.capacity-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  background: #ffffff;
+  min-height: 96px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.capacity-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.capacity-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+</style>

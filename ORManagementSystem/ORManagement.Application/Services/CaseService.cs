@@ -193,7 +193,17 @@ public class CaseService : ICaseService
                 "INVALID_REQUEST_STATUS",
                 "Only approved or modified requests can be scheduled.");
         }
+        var durationValidation = ValidateScheduledDuration(
+    request.ScheduledStart,
+    request.ScheduledEnd,
+    orRequest.EstimatedDurationMin);
 
+        if (!durationValidation.Success)
+        {
+            return ServiceResultDto<int>.Fail(
+                durationValidation.ErrorCode!,
+                durationValidation.Message!);
+        }
         if (!_availabilityWindowEngine.IsDateAllowed(
                 request.ScheduledStart.Date,
                 orRequest.AvailableDaysMask))
@@ -301,7 +311,23 @@ public class CaseService : ICaseService
             "Surgical case created successfully.");
     }
 
+    private static ServiceResultDto ValidateScheduledDuration(
+    DateTime scheduledStart,
+    DateTime scheduledEnd,
+    int estimatedDurationMin)
+    {
+        var scheduledDurationMin = (int)Math.Round(
+            (scheduledEnd - scheduledStart).TotalMinutes);
 
+        if (scheduledDurationMin < estimatedDurationMin)
+        {
+            return ServiceResultDto.Fail(
+                "CASE_DURATION_TOO_SHORT",
+                $"Scheduled duration is {scheduledDurationMin} minutes, but request estimated duration is {estimatedDurationMin} minutes.");
+        }
+
+        return ServiceResultDto.Ok();
+    }
 
 
     public async Task<ServiceResultDto> UpdateCaseStatusAsync(
@@ -402,7 +428,15 @@ public class CaseService : ICaseService
                 "REQUEST_NOT_FOUND",
                 "Related OR request was not found.");
         }
+        var durationValidation = ValidateScheduledDuration(
+    request.ScheduledStart,
+    request.ScheduledEnd,
+    orRequest.EstimatedDurationMin);
 
+        if (!durationValidation.Success)
+        {
+            return durationValidation;
+        }
         var blockBoundary = await _caseRepository.GetBlockBoundaryAsync(
             hospitalId,
             existingCase.BlockId);

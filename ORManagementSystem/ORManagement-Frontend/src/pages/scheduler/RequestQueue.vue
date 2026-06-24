@@ -60,7 +60,7 @@ const formatScore = value => {
 const loadCapacitySummary = async () => {
   try {
     const response = await getRequestCapacitySummary()
-    
+
     capacitySummary.value = {
       schedulingHourCapacity: response.data?.schedulingHourCapacity ?? 100,
       allocatedHourCapacity: response.data?.allocatedHourCapacity ?? 0,
@@ -247,7 +247,7 @@ onMounted(async () => {
 
       <div class="col-md-3">
         <div class="capacity-card">
-          <div class="capacity-label">Allocated Hour Capacity</div>
+          <div class="capacity-label">Allocated Open Hour Capacity</div>
           <div class="capacity-value text-primary">
             {{ formatScore(capacitySummary.allocatedHourCapacity) }} hrs
           </div>
@@ -268,7 +268,7 @@ onMounted(async () => {
 
       <div class="col-md-3">
         <div class="capacity-card">
-          <div class="capacity-label">Recurring Top Doctors</div>
+          <div class="capacity-label">Recurring Doctors</div>
 
           <div v-if="capacitySummary.topRecurringDoctors.length > 0">
             <div

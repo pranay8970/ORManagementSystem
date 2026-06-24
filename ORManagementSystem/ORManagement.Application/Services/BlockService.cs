@@ -243,20 +243,25 @@ public class BlockService : IBlockService
     }
 
     public async Task<ServiceResultDto<int>> GenerateBlocksAsync(
-        int hospitalId,
-        int userId,
-        string roleName,
-        GenerateBlocksRequestDto request,
-        string? ipAddress,
-        string? userAgent)
+     int hospitalId,
+     int userId,
+     string roleName,
+     GenerateBlocksRequestDto request,
+     string? ipAddress,
+     string? userAgent)
     {
         if (request.ToDate.Date < request.FromDate.Date)
         {
-            return ServiceResultDto<int>.Fail("INVALID_DATE_RANGE", "To date cannot be before From date.");
+            return ServiceResultDto<int>.Fail(
+                "INVALID_DATE_RANGE",
+                "To date cannot be before From date.");
         }
 
-        var templates = await _blockRepository.GetActiveTemplatesForGenerationAsync(hospitalId);
+        var templates = await _blockRepository.GetActiveTemplatesForGenerationAsync(
+            hospitalId);
+
         var generatedCount = 0;
+        var skippedCount = 0;
 
         for (var date = request.FromDate.Date; date <= request.ToDate.Date; date = date.AddDays(1))
         {
@@ -274,39 +279,67 @@ public class BlockService : IBlockService
                     continue;
                 }
 
-                if (template.EffectiveTo.HasValue && date > template.EffectiveTo.Value.Date)
+                if (template.EffectiveTo.HasValue &&
+                    date > template.EffectiveTo.Value.Date)
                 {
                     continue;
                 }
 
-                var isException = await _blockRepository.IsTemplateExceptionAsync(template.TemplateId, date);
+                var isException = await _blockRepository.IsTemplateExceptionAsync(
+                    template.TemplateId,
+                    date);
 
                 if (isException)
                 {
+                    skippedCount++;
                     continue;
                 }
 
-                var exists = await _blockRepository.GeneratedBlockExistsAsync(
+                /*
+                    Full overlap check:
+                    Prevents generated blocks from overlapping in same OR room/date/time.
+                    This is better than checking only same room/date/start time.
+                */
+                var conflictExists = await _blockRepository.BlockConflictExistsAsync(
+                    hospitalId,
                     template.RoomId,
                     date,
-                    template.StartTime);
+                    template.StartTime,
+                    template.EndTime);
 
-                if (exists)
+                if (conflictExists)
                 {
+                    skippedCount++;
+                    continue;
+                }
+
+                /*
+                    Template block type rules:
+                    Recurring  -> keep surgeon
+                    Open       -> no surgeon
+                    Emergency  -> no surgeon
+                */
+                int? generatedSurgeonId = template.BlockType == "Recurring"
+                    ? template.SurgeonId
+                    : null;
+
+                if (template.BlockType == "Recurring" && generatedSurgeonId is null)
+                {
+                    skippedCount++;
                     continue;
                 }
 
                 await _blockRepository.CreateBlockAsync(
                     hospitalId,
-                    template.SurgeonId,
+                    generatedSurgeonId,
                     template.RoomId,
                     template.TemplateId,
                     date,
                     template.StartTime,
                     template.EndTime,
-                    "Recurring",
+                    template.BlockType,
                     "Allocated",
-                    "Generated from recurring template.",
+                    $"Generated from {template.BlockType} template #{template.TemplateId}.",
                     userId);
 
                 generatedCount++;
@@ -322,12 +355,14 @@ public class BlockService : IBlockService
             Entity = "BlockAllocations",
             EntityId = null,
             NewValue = generatedCount.ToString(),
-            Remarks = $"Generated blocks from {request.FromDate:yyyy-MM-dd} to {request.ToDate:yyyy-MM-dd}.",
+            Remarks = $"Generated {generatedCount} blocks and skipped {skippedCount} from {request.FromDate:yyyy-MM-dd} to {request.ToDate:yyyy-MM-dd}.",
             IpAddress = ipAddress,
             UserAgent = userAgent
         });
 
-        return ServiceResultDto<int>.Ok(generatedCount, "Blocks generated successfully.");
+        return ServiceResultDto<int>.Ok(
+            generatedCount,
+            $"Blocks generated successfully. Generated: {generatedCount}, Skipped: {skippedCount}.");
     }
 
     public async Task<ServiceResultDto<List<BlockAllocationDto>>> GetBlocksAsync(
