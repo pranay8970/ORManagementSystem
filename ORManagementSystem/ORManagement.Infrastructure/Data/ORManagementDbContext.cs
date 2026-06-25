@@ -661,10 +661,19 @@ public partial class ORManagementDbContext : DbContext
 
             entity.HasIndex(e => new { e.BlockId, e.CalculatedAt }, "IX_UtilizationRecords_Block");
 
-            entity.Property(e => e.CalculatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.UtilStatus).HasMaxLength(20);
+            entity.HasIndex(e => e.BlockId, "UQ_UtilizationRecords_BlockId")
+                .IsUnique();
+
+            entity.Property(e => e.CalculatedAt)
+                .HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.Property(e => e.UtilStatus)
+                .HasMaxLength(20);
+
             entity.Property(e => e.UtilizationPct)
-                .HasComputedColumnSql("((CONVERT([decimal](9,2),[UsedMinutes])*(100.0))/nullif([AllocatedMinutes],(0)))", true)
+                .HasComputedColumnSql(
+                    "((CONVERT(9,2,[UsedMinutes])*(100.0))/nullif([AllocatedMinutes],(0)))",
+                    true)
                 .HasColumnType("numeric(25, 14)");
 
             entity.HasOne(d => d.Block).WithMany(p => p.UtilizationRecords)
@@ -672,6 +681,8 @@ public partial class ORManagementDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UtilizationRecords_Blocks");
         });
+
+
 
         modelBuilder.Entity<WaitlistRequest>(entity =>
         {
