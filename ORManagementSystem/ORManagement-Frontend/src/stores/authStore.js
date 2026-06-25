@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import * as authService from '../services/authService'
 
-const extractUser = response => {
+const extractUser = (response) => {
   return (
     response?.data?.user ||
     response?.data?.data?.user ||
@@ -21,8 +21,8 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isSurgeon: state => state.user?.roleName === 'Surgeon',
-    isScheduler: state => state.user?.roleName === 'ORScheduler'
+    isSurgeon: (state) => state.user?.roleName === 'Surgeon',
+    isScheduler: (state) => state.user?.roleName === 'ORScheduler'
   },
 
   actions: {
@@ -119,5 +119,12 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = false
       this.initialized = true
     }
+  },
+
+  // ✅ ✅ Added Pinia Persistence (NO logic changed)
+  persist: {
+    key: 'or-auth',
+    storage: localStorage,
+    paths: ['user', 'isAuthenticated']
   }
 })

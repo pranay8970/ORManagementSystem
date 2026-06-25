@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from './router'
 
 // toast
@@ -13,7 +14,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import './assets/css/style.css'
 
-// toast options (optional but recommended)
+// toast options
 const toastOptions = {
   position: 'top-right',
   timeout: 3000,
@@ -23,7 +24,15 @@ const toastOptions = {
 
 const app = createApp(App)
 
-app.use(createPinia())
+// ✅ CREATE PINIA INSTANCE
+const pinia = createPinia()
+
+// ✅ ADD PERSISTENCE PLUGIN
+pinia.use(piniaPluginPersistedstate)
+
+// ✅ USE PINIA
+app.use(pinia)
+
 app.use(router)
 app.use(Toast, toastOptions)
 

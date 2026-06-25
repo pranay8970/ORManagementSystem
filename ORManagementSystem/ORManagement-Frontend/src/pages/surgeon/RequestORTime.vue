@@ -8,6 +8,8 @@ import { getPatients } from '../../services/masterDataService'
 import { getCurrentCycle } from '../../services/cycleService'
 import { createRequest } from '../../services/requestService'
 import { showToast } from '../../utils/toast'
+import { useSurgeonRequestStore } from '@/stores/surgeonRequestStore'
+
 
 const router = useRouter()
 
@@ -17,14 +19,9 @@ const submitting = ref(false)
 const patients = ref([])
 const currentCycle = ref(null)
 
-const form = ref({
-  patientId: '',
-  surgeryType: '',
-  estimatedDurationMin: '',
-  priority: 'Elective',
-  patientReadiness: 'Ready',
-  remarks: ''
-})
+const requestStore = useSurgeonRequestStore()
+const form = requestStore.form
+
 
 const loadData = async () => {
   loading.value = true
@@ -108,6 +105,7 @@ const submitRequest = async () => {
     })
 
     showToast('OR request submitted successfully.', 'success')
+    requestStore.resetForm()
     router.push('/app/surgeon/requests')
   } catch (err) {
     const message =
