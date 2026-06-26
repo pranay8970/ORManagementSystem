@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using ORManagement.Infrastructure.AI;
 using ORManagement.Api.Middleware;
+using ORManagement.Application.DTOs.Requests;
 using ORManagement.Application.Engines;
 using ORManagement.Application.Interfaces.Repositories;
 using ORManagement.Application.Interfaces.Services;
@@ -21,12 +23,16 @@ builder.Services.AddCors(options =>
             .WithOrigins("http://localhost:5173") // Vue dev server
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials(); // REQUIRED for cookies
+            .AllowCredentials() // REQUIRED for cookies
+            .WithExposedHeaders("X-Data-Source");
     });
 });
 
 //Register Controllers
 builder.Services.AddControllers();
+
+//Register Memory Cache
+builder.Services.AddMemoryCache();
 
 //Register the DbContext with the connection string from appsettings.json
 builder.Services.AddDbContext<ORManagementDbContext>(options =>
@@ -57,6 +63,14 @@ builder.Services.AddScoped<ForecastRecommendationEngine>();
 // Requests
 builder.Services.AddScoped<IRequestRepository, RequestRepository>();
 builder.Services.AddScoped<IRequestService, RequestService>();
+
+// Clinical Text Scoring: ONNX ClinicalBERT first, fallback keyword scorer if ONNX fails
+builder.Services.Configure<ClinicalScoringOptions>(
+    builder.Configuration.GetSection("ClinicalScoring"));
+
+builder.Services.AddSingleton<FallbackClinicalKeywordScoringService>();
+
+builder.Services.AddSingleton<IClinicalTextScoringService, ClinicalBertOnnxTextScoringService>();
 
 // Cycles
 builder.Services.AddScoped<ICycleRepository, CycleRepository>();
