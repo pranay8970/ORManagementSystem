@@ -47,8 +47,8 @@ const selectedReleaseBlock = ref(null)
 const selectedExceptionTemplate = ref(null)
 
 const blockFilters = ref({
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26',
+  fromDate: '2026-06-29',
+  toDate: '2026-07-03',
   surgeonId: '',
   roomId: ''
 })
@@ -68,14 +68,14 @@ const templateForm = ref({
   dayOfWeek: 1,
   startTime: '08:00',
   endTime: '12:00',
-  effectiveFrom: '2026-06-22',
+  effectiveFrom: '2026-06-29',
   effectiveTo: '',
   isActive: true
 })
 
 const generateForm = ref({
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26'
+  fromDate: '2026-06-29',
+  toDate: '2026-07-03'
 })
 
 const blockForm = ref({

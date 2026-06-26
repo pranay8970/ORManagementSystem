@@ -35,8 +35,8 @@ const selectedWaitlist = ref(null)
 
 const slotFilters = ref({
   state: 'Available',
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26'
+  fromDate: '2026-06-29',
+  toDate: '2026-07-03'
 })
 
 const slotStatusForm = ref({
