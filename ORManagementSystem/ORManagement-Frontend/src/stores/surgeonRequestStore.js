@@ -1,30 +1,31 @@
 import { defineStore } from 'pinia'
 
+const getDefaultForm = () => ({
+  patientId: '',
+  surgeryType: '',
+  estimatedDurationMin: '',
+  priority: 'Elective',
+  patientReadiness: 'Ready',
+  remarks: ''
+})
+
 export const useSurgeonRequestStore = defineStore('surgeonRequest', {
   state: () => ({
-    form: {
-      patientId: '',
-      surgeryType: '',
-      estimatedDurationMin: '',
-      priority: 'Elective',
-      patientReadiness: 'Ready',
-      remarks: ''
-    }
+    form: getDefaultForm()
   }),
 
   actions: {
     resetForm() {
-      this.form = {
-        patientId: '',
-        surgeryType: '',
-        estimatedDurationMin: '',
-        priority: 'Elective',
-        patientReadiness: 'Ready',
-        remarks: ''
-      }
+      this.form = getDefaultForm()
     }
   },
 
-  // ✅ THIS IS KEY
-  persist: true
+  // ✅ Persist ONLY the form safely
+  persist: {
+    key: 'surgeon-request-store',
+    storage: localStorage,
+
+    // ✅ important: persist only what you need
+    paths: ['form']
+  }
 })

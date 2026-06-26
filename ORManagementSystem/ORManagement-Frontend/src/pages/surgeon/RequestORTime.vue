@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 
 import PageHeader from '../../components/common/PageHeader.vue'
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue'
@@ -9,7 +10,6 @@ import { getCurrentCycle } from '../../services/cycleService'
 import { createRequest } from '../../services/requestService'
 import { showToast } from '../../utils/toast'
 import { useSurgeonRequestStore } from '@/stores/surgeonRequestStore'
-
 
 const router = useRouter()
 
@@ -20,8 +20,7 @@ const patients = ref([])
 const currentCycle = ref(null)
 
 const requestStore = useSurgeonRequestStore()
-const form = requestStore.form
-
+const { form } = storeToRefs(requestStore)
 
 const loadData = async () => {
   loading.value = true
@@ -52,7 +51,7 @@ const validate = () => {
     return false
   }
 
-  if (!form.value.surgeryType.trim()) {
+  if (!form.value.surgeryType || !form.value.surgeryType.trim()) {
     showToast('Surgery type is required.', 'warning')
     return false
   }
@@ -84,13 +83,9 @@ const validate = () => {
 }
 
 const submitRequest = async () => {
-  if (submitting.value) {
-    return
-  }
+  if (submitting.value) return
 
-  if (!validate()) {
-    return
-  }
+  if (!validate()) return
 
   submitting.value = true
 
