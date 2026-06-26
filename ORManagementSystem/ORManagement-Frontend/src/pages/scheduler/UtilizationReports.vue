@@ -1,10 +1,14 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useOrSchedulerStore } from '../../stores/orSchedulerStore'
+
 import PageHeader from '../../components/common/PageHeader.vue'
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import StatusBadge from '../../components/common/StatusBadge.vue'
 import KpiCard from '../../components/common/KpiCard.vue'
+
 import {
   getUtilization,
   getUtilizationSummary,
@@ -16,15 +20,28 @@ import {
   calculateORRoomWeeklyUtilization,
   generateORRoomWeeklyReport
 } from '../../services/utilizationService'
+
 import { formatDate, formatDateTime, formatPercent } from '../../utils/formatters'
 import { showToast } from '../../utils/toast'
 
+// ✅ Pinia store
+const store = useOrSchedulerStore()
+
+const {
+  activeTab,
+  blockFilters,
+  roomFilters,
+  calculateForm,
+  roomCalculateForm,
+  reportForm,
+  weeklyReport
+} = storeToRefs(store)
+
+// Local UI state (NOT persisted)
 const loading = ref(false)
 const calculatingBlock = ref(false)
 const calculatingRoom = ref(false)
 const generatingReport = ref(false)
-
-const activeTab = ref('blocks')
 
 const records = ref([])
 const summary = ref(null)
@@ -34,37 +51,7 @@ const roomRecords = ref([])
 const roomSummary = ref(null)
 const underutilizedRooms = ref([])
 
-const weeklyReport = ref(null)
-
-const blockFilters = ref({
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26',
-  surgeonId: '',
-  roomId: '',
-  status: ''
-})
-
-const roomFilters = ref({
-  fromDate: '2026-06-22',
-  toDate: '2026-06-22',
-  roomId: '',
-  status: ''
-})
-
-const calculateForm = ref({
-  blockId: '',
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26'
-})
-
-const roomCalculateForm = ref({
-  weekStartDate: '2026-06-22',
-  orRoomId: ''
-})
-
-const reportForm = ref({
-  weekStartDate: '2026-06-22'
-})
+/* ---------------- BLOCK FUNCTIONS ---------------- */
 
 const loadBlockSummary = async () => {
   const response = await getUtilizationSummary({
@@ -105,6 +92,8 @@ const loadBlockTab = async () => {
   ])
 }
 
+/* ---------------- ROOM FUNCTIONS ---------------- */
+
 const loadRoomSummary = async () => {
   const response = await getORRoomUtilizationSummary({
     fromDate: roomFilters.value.fromDate,
@@ -143,6 +132,8 @@ const loadRoomTab = async () => {
   ])
 }
 
+/* ---------------- PAGE LOAD ---------------- */
+
 const loadPage = async () => {
   loading.value = true
 
@@ -170,10 +161,14 @@ const loadPage = async () => {
   }
 }
 
+/* ---------------- TAB SWITCH ---------------- */
+
 const switchTab = async tab => {
   activeTab.value = tab
   await loadPage()
 }
+
+/* ---------------- CALCULATE BLOCK ---------------- */
 
 const submitCalculateBlock = async () => {
   calculatingBlock.value = true
@@ -211,6 +206,8 @@ const submitCalculateBlock = async () => {
   }
 }
 
+/* ---------------- CALCULATE ROOM ---------------- */
+
 const submitCalculateRoom = async () => {
   calculatingRoom.value = true
 
@@ -245,6 +242,8 @@ const submitCalculateRoom = async () => {
   }
 }
 
+/* ---------------- GENERATE REPORT ---------------- */
+
 const submitGenerateReport = async () => {
   generatingReport.value = true
 
@@ -266,6 +265,8 @@ const submitGenerateReport = async () => {
     generatingReport.value = false
   }
 }
+
+/* ---------------- MOUNT ---------------- */
 
 onMounted(loadPage)
 </script>
