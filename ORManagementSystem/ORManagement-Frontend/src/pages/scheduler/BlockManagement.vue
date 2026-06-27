@@ -243,7 +243,7 @@ const resetTemplateForm = () => {
     dayOfWeek: 1,
     startTime: '08:00',
     endTime: '12:00',
-    effectiveFrom: '2026-06-22',
+    effectiveFrom: '2026-06-29',
     effectiveTo: '',
     isActive: true
   }
