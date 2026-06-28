@@ -66,7 +66,6 @@ public class BlockService : IBlockService
                 "DUPLICATE_TEMPLATE",
                 "A matching block template already exists for the selected room, surgeon, day, time, and block type.");
         }
-        var templateId = await _blockRepository.CreateTemplateAsync(request);
 
 
         var overlapExists = await _blockRepository.TemplateOverlapExistsAsync(
@@ -82,7 +81,7 @@ public class BlockService : IBlockService
                 "TEMPLATE_OVERLAP",
                 "Template time overlaps with an existing active template for the selected room and day.");
         }
-
+        var templateId = await _blockRepository.CreateTemplateAsync(request);
         await _auditRepository.AddAuditLogAsync(new CreateAuditLogDto
         {
             HospitalId = hospitalId,

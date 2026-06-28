@@ -1,9 +1,11 @@
 export const formatDate = (value) => {
   if (!value) return '-'
 
-  return new Date(value).toLocaleDateString()
-}
+  const datePart = String(value).substring(0, 10)
+  const [year, month, day] = datePart.split('-').map(Number)
 
+  return new Date(year, month - 1, day).toLocaleDateString()
+}
 export const formatDateTime = (value) => {
   if (!value) return '-'
 

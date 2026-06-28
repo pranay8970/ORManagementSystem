@@ -492,110 +492,8 @@ onMounted(loadDashboard)
           </div>
         </div>
       </div>
-
-      <div class="row g-4">
-        <!-- Upcoming cases -->
-        <div class="col-lg-7">
-          <div class="page-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0">
-                <i class="bi bi-hospital me-2 text-primary"></i>
-                Upcoming Cases
-              </h5>
-            </div>
-
-            <EmptyState
-              v-if="!dashboard.upcomingCases || dashboard.upcomingCases.length === 0"
-              title="No upcoming cases"
-              message="You do not have any upcoming scheduled cases."
-              icon="bi-calendar-x"
-            />
-
-            <div v-else class="table-responsive">
-              <table class="table table-hover align-middle">
-                <thead>
-                  <tr>
-                    <th>Case</th>
-                    <th>Room</th>
-                    <th>Surgery</th>
-                    <th>Scheduled</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  <tr
-                    v-for="item in dashboard.upcomingCases"
-                    :key="item.surgeryId"
-                  >
-                    <td>#{{ item.surgeryId }}</td>
-                    <td>{{ item.roomName }}</td>
-                    <td>{{ item.surgeryType }}</td>
-                    <td>
-                      <div>{{ formatDateTime(item.scheduledStart) }}</div>
-                      <small class="text-muted">
-                        to {{ formatDateTime(item.scheduledEnd) }}
-                      </small>
-                    </td>
-                    <td>
-                      <StatusBadge :status="item.caseStatus" />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent requests -->
-        <div class="col-lg-5">
-          <div class="page-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="mb-0">
-                <i class="bi bi-list-check me-2 text-primary"></i>
-                Recent Requests
-              </h5>
-
-              <router-link
-                to="/app/surgeon/requests"
-                class="btn btn-sm btn-outline-primary"
-              >
-                View All
-              </router-link>
-            </div>
-
-            <EmptyState
-              v-if="!dashboard.recentRequests || dashboard.recentRequests.length === 0"
-              title="No requests"
-              message="You have not submitted any OR requests yet."
-              icon="bi-inbox"
-            />
-
-            <div v-else class="request-list">
-              <div
-                v-for="item in dashboard.recentRequests"
-                :key="item.requestId"
-                class="request-item"
-              >
-                <div class="d-flex justify-content-between gap-2">
-                  <div>
-                    <strong>#{{ item.requestId }} - {{ item.surgeryType }}</strong>
-                    <div class="text-muted small">
-                      {{ item.priority }} · {{ item.patientReadiness }}
-                    </div>
-                    <div class="text-muted small">
-                      Created: {{ formatDateTime(item.createdAt) }}
-                    </div>
-                  </div>
-
-                  <StatusBadge :status="item.requestStatus" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </div> <!-- closes v-else-if="dashboard" -->
+      
 
     <EmptyState
       v-else
@@ -607,18 +505,6 @@ onMounted(loadDashboard)
 </template>
 
 <style scoped>
-.request-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.request-item {
-  padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #fff;
-}
 
 .weekly-calendar-wrapper {
   overflow-x: auto;
