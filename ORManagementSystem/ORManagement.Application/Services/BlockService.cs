@@ -68,6 +68,7 @@ public class BlockService : IBlockService
         }
 
 
+
         var overlapExists = await _blockRepository.TemplateOverlapExistsAsync(
             hospitalId,
             request.ORRoomId,
@@ -82,6 +83,7 @@ public class BlockService : IBlockService
                 "Template time overlaps with an existing active template for the selected room and day.");
         }
         var templateId = await _blockRepository.CreateTemplateAsync(request);
+
         await _auditRepository.AddAuditLogAsync(new CreateAuditLogDto
         {
             HospitalId = hospitalId,
@@ -662,6 +664,36 @@ public class BlockService : IBlockService
         if (request.StartTime < existing.StartTime || request.EndTime > existing.EndTime)
         {
             return ServiceResultDto<int>.Fail("INVALID_RELEASE_TIME", "Release time must be within block time.");
+        }
+        if (existing.BlockStatus == "FullyBooked")
+        {
+            return ServiceResultDto<int>.Fail(
+                "BLOCK_FULLY_BOOKED",
+                "This block is fully booked. Release is not allowed unless scheduled cases are moved or cancelled first.");
+        }
+        var releaseOverlapsCases = await _blockRepository.ReleaseWindowHasCasesAsync(
+    hospitalId,
+    blockId,
+    request.StartTime,
+    request.EndTime);
+
+        if (releaseOverlapsCases)
+        {
+            return ServiceResultDto<int>.Fail(
+                "RELEASE_OVERLAPS_CASE",
+                "Release time overlaps with an existing scheduled case in this block.");
+        }
+        var releaseSlotConflictExists = await _blockRepository.ReleaseSlotConflictExistsAsync(
+    hospitalId,
+    blockId,
+    request.StartTime,
+    request.EndTime);
+
+        if (releaseSlotConflictExists)
+        {
+            return ServiceResultDto<int>.Fail(
+                "RELEASE_SLOT_CONFLICT",
+                "Release time overlaps with an existing released slot for this block.");
         }
 
         var source = roleName == "Surgeon"
