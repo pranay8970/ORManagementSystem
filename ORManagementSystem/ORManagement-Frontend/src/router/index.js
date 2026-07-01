@@ -84,11 +84,6 @@ const routes = [
         meta: { role: 'ORScheduler' }
       },
       {
-        path: 'scheduler/rooms-calendar',
-        component: RoomsCalendar,
-        meta: { role: 'ORScheduler' }
-      },
-      {
         path: 'scheduler/requests',
         component: RequestQueue,
         meta: { role: 'ORScheduler' }

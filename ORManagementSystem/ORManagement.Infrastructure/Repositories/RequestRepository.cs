@@ -206,11 +206,11 @@ public class RequestRepository : IRequestRepository
     }
 
     public async Task<bool> UpdateRequestStatusAsync(
-        int hospitalId,
-        int requestId,
-        string status,
-        string? schedulerRemarks,
-        int modifiedByUserId)
+     int hospitalId,
+     int requestId,
+     string status,
+     string? schedulerRemarks,
+     int modifiedByUserId)
     {
         var entity = await _dbContext.ORRequests
             .FirstOrDefaultAsync(request =>
@@ -227,6 +227,25 @@ public class RequestRepository : IRequestRepository
         entity.RequestStatus = status;
         entity.SchedulerRemarks = schedulerRemarks;
         entity.ModifiedByUserId = modifiedByUserId;
+
+        if (status == "Waitlisted")
+        {
+            var waitlistExists = await _dbContext.WaitlistRequests
+                .AnyAsync(waitlist => waitlist.RequestId == requestId);
+
+            if (!waitlistExists)
+            {
+                var waitlistRequest = new WaitlistRequest
+                {
+                    RequestId = requestId,
+                    WaitingSince = DateTime.UtcNow,
+                    MatchScore = null,
+                    MatchedSlotId = null
+                };
+
+                await _dbContext.WaitlistRequests.AddAsync(waitlistRequest);
+            }
+        }
 
         if (oldStatus == "Waitlisted" && status != "Waitlisted")
         {

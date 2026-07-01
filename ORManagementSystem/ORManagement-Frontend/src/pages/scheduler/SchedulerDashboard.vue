@@ -97,7 +97,7 @@ onMounted(loadDashboard)
         <div class="col-md-3">
           <KpiCard
             label="Avg Utilization"
-            :value="formatPercent(dashboard.averageUtilizationPercent)"
+            :value="formatPercent(Math.abs(dashboard.averageUtilizationPercent))"
             icon="bi-bar-chart"
             color="success"
           />

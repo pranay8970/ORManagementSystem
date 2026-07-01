@@ -352,10 +352,10 @@ public class RequestService : IRequestService
             return ServiceResultDto.Fail("REQUEST_STATUS_UPDATE_FAILED", "Request status could not be updated.");
         }
 
-        if (status == "Waitlisted")
-        {
-            await _requestRepository.AddToWaitlistIfNotExistsAsync(requestId);
-        }
+        //if (status == "Waitlisted")
+        //{
+        //    await _requestRepository.AddToWaitlistIfNotExistsAsync(requestId);
+        //}
 
         await _auditRepository.AddAuditLogAsync(new CreateAuditLogDto
         {

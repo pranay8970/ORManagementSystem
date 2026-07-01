@@ -183,9 +183,7 @@ onMounted(loadData)
             />
             <span class="input-group-text">min</span>
           </div>
-          <small class="text-muted">
-            Scheduler will allocate block time using this duration.
-          </small>
+          
         </div>
 
         <div class="col-md-3">
@@ -215,17 +213,7 @@ onMounted(loadData)
           />
         </div>
 
-        <div class="col-md-12">
-          <div class="alert alert-light border mb-0">
-            <div class="fw-semibold mb-1">
-              Scheduling details are now assigned by the scheduler.
-            </div>
-            <div class="small text-muted">
-              Preferred date, available days, and preferred quarter are no longer selected by the surgeon.
-              The system defaults requests to flexible weekday scheduling for the active planning cycle.
-            </div>
-          </div>
-        </div>
+        
 
         <div class="col-md-12">
           <label class="form-label">Remarks</label>
