@@ -41,11 +41,11 @@ const schedulerLinks = [
     icon: 'bi-speedometer2',
     to: '/app/scheduler/dashboard'
   },
-  {
-    label: 'OR Rooms',
-    icon: 'bi-calendar3',
-    to: '/app/scheduler/rooms-calendar'
-  },
+  // {
+  //   label: 'OR Rooms',
+  //   icon: 'bi-calendar3',
+  //   to: '/app/scheduler/rooms-calendar'
+  // },
   {
     label: 'Request Approval',
     icon: 'bi-inbox',

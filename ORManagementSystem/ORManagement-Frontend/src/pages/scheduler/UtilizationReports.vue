@@ -46,7 +46,7 @@ const blockFilters = ref({
 
 const roomFilters = ref({
   fromDate: '2026-06-22',
-  toDate: '2026-06-22',
+  toDate: '2026-06-26',
   roomId: '',
   status: ''
 })
@@ -63,7 +63,7 @@ const roomCalculateForm = ref({
 })
 
 const reportForm = ref({
-  weekStartDate: '2026-06-22'
+  weekStartDate: '2026-06-29'
 })
 
 const loadBlockSummary = async () => {
@@ -306,7 +306,7 @@ onMounted(loadPage)
         </button>
       </li>
 
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <button
           class="nav-link"
           :class="{ active: activeTab === 'report' }"
@@ -314,7 +314,7 @@ onMounted(loadPage)
         >
           Overall Weekly Report
         </button>
-      </li>
+      </li> -->
     </ul>
 
     <LoadingSpinner v-if="loading" />
@@ -360,7 +360,7 @@ onMounted(loadPage)
           </div>
         </div>
 
-        <div class="page-card mb-4">
+        <!-- <div class="page-card mb-4">
           <h5 class="mb-3">Block Filters</h5>
 
           <div class="row g-3 align-items-end">
@@ -401,60 +401,9 @@ onMounted(loadPage)
               </button>
             </div>
           </div>
-        </div>
+        </div> -->
 
-        <div class="page-card mb-4">
-          <h5 class="mb-3">
-            <i class="bi bi-calculator me-2 text-primary"></i>
-            Calculate Block Utilization
-          </h5>
-
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-              <label class="form-label">Block ID</label>
-              <input
-                v-model="calculateForm.blockId"
-                type="number"
-                class="form-control"
-                placeholder="Optional"
-              />
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">From Date</label>
-              <input
-                v-model="calculateForm.fromDate"
-                type="date"
-                class="form-control"
-                :disabled="!!calculateForm.blockId"
-              />
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">To Date</label>
-              <input
-                v-model="calculateForm.toDate"
-                type="date"
-                class="form-control"
-                :disabled="!!calculateForm.blockId"
-              />
-            </div>
-
-            <div class="col-md-3">
-              <button
-                class="btn btn-success w-100"
-                :disabled="calculatingBlock"
-                @click="submitCalculateBlock"
-              >
-                <span
-                  v-if="calculatingBlock"
-                  class="spinner-border spinner-border-sm me-2"
-                ></span>
-                Calculate Blocks
-              </button>
-            </div>
-          </div>
-        </div>
+        
 
         <div class="page-card mb-4">
           <h5 class="mb-3">Block Utilization Records</h5>
@@ -546,7 +495,58 @@ onMounted(loadPage)
           </div>
         </div>
       </div>
+      <!-- <div class="page-card mb-4">
+          <h5 class="mb-3">
+            <i class="bi bi-calculator me-2 text-primary"></i>
+            Calculate Block Utilization
+          </h5>
 
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label">Block ID</label>
+              <input
+                v-model="calculateForm.blockId"
+                type="number"
+                class="form-control"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">From Date</label>
+              <input
+                v-model="calculateForm.fromDate"
+                type="date"
+                class="form-control"
+                :disabled="!!calculateForm.blockId"
+              />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">To Date</label>
+              <input
+                v-model="calculateForm.toDate"
+                type="date"
+                class="form-control"
+                :disabled="!!calculateForm.blockId"
+              />
+            </div>
+
+            <div class="col-md-3">
+              <button
+                class="btn btn-success w-100"
+                :disabled="calculatingBlock"
+                @click="submitCalculateBlock"
+              >
+                <span
+                  v-if="calculatingBlock"
+                  class="spinner-border spinner-border-sm me-2"
+                ></span>
+                Calculate Blocks
+              </button>
+            </div>
+          </div>
+        </div> -->
       <!-- Room Utilization Tab -->
       <div v-if="activeTab === 'rooms'">
         <div class="row g-3 mb-4" v-if="roomSummary">
@@ -587,7 +587,7 @@ onMounted(loadPage)
           </div>
         </div>
 
-        <div class="page-card mb-4">
+        <!-- <div class="page-card mb-4">
           <h5 class="mb-3">
             <i class="bi bi-building-check me-2 text-primary"></i>
             Calculate Room Weekly Utilization
@@ -628,9 +628,9 @@ onMounted(loadPage)
               </button>
             </div>
           </div>
-        </div>
+        </div> -->
 
-        <div class="page-card mb-4">
+        <!-- <div class="page-card mb-4">
           <h5 class="mb-3">Room Utilization Filters</h5>
 
           <div class="row g-3 align-items-end">
@@ -666,7 +666,7 @@ onMounted(loadPage)
               </button>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <div class="page-card mb-4">
           <h5 class="mb-3">Room Utilization Records</h5>

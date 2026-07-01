@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+
 import AppModal from '../../components/common/AppModal.vue'
 import PageHeader from '../../components/common/PageHeader.vue'
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
-import StatusBadge from '../../components/common/StatusBadge.vue'
+
 import {
   getRoomsPaged,
   createRoom,
@@ -12,8 +13,15 @@ import {
   deleteRoom,
   getCalendar
 } from '../../services/roomService'
-import { formatDate, formatDateTime, formatTime } from '../../utils/formatters'
+
 import { showToast } from '../../utils/toast'
+
+const props = defineProps({
+  embedded: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const loading = ref(false)
 const saving = ref(false)
@@ -35,8 +43,8 @@ const roomFilters = ref({
 })
 
 const calendarFilters = ref({
-  fromDate: '2026-06-22',
-  toDate: '2026-06-26'
+  fromDate: '2026-06-29',
+  toDate: '2026-07-03'
 })
 
 const roomForm = ref({
@@ -239,12 +247,16 @@ onMounted(loadPage)
 <template>
   <div>
     <PageHeader
+      v-if="!embedded"
       title="Rooms & Calendar"
       subtitle="Manage operating rooms and view the OR schedule calendar"
       icon="bi-calendar3"
     >
       <template #actions>
-        <button class="btn btn-primary" @click="openCreateRoom">
+        <button
+          class="btn btn-primary"
+          @click="openCreateRoom"
+        >
           <i class="bi bi-plus-circle me-1"></i>
           Create Room
         </button>
@@ -254,24 +266,42 @@ onMounted(loadPage)
     <LoadingSpinner v-if="loading" />
 
     <div v-else>
-      <!-- Rooms table -->
       <div class="page-card mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0">
-            <i class="bi bi-hospital me-2 text-primary"></i>
-            Operating Rooms
-          </h5>
+          <div>
+            <h5 class="mb-0">
+              <i class="bi bi-hospital me-2 text-primary"></i>
+              Operating Rooms
+            </h5>
+            <small class="text-muted">
+              Manage room master data used by block scheduling and calendar views.
+            </small>
+          </div>
 
-          <div class="text-muted small">
-            Total: {{ roomFilters.totalCount }}
-            · Page {{ roomFilters.pageNumber }} of {{ roomFilters.totalPages || 1 }}
+          <div class="d-flex align-items-center gap-3">
+            <div class="text-muted small">
+              Total: {{ roomFilters.totalCount }}
+              · Page {{ roomFilters.pageNumber }} of {{ roomFilters.totalPages || 1 }}
+            </div>
+
+            <button
+              v-if="embedded"
+              class="btn btn-primary btn-sm"
+              @click="openCreateRoom"
+            >
+              <i class="bi bi-plus-circle me-1"></i>
+              Create Room
+            </button>
           </div>
         </div>
 
         <div class="row g-3 align-items-end mb-4">
           <div class="col-md-3">
             <label class="form-label">Status</label>
-            <select v-model="roomFilters.isActive" class="form-select">
+            <select
+              v-model="roomFilters.isActive"
+              class="form-select"
+            >
               <option value="">All</option>
               <option :value="true">Active</option>
               <option :value="false">Inactive</option>
@@ -293,13 +323,19 @@ onMounted(loadPage)
           </div>
 
           <div class="col-md-2">
-            <button class="btn btn-primary w-100" @click="applyRoomFilter">
+            <button
+              class="btn btn-primary w-100"
+              @click="applyRoomFilter"
+            >
               Apply
             </button>
           </div>
 
           <div class="col-md-2">
-            <button class="btn btn-outline-secondary w-100" @click="clearRoomFilter">
+            <button
+              class="btn btn-outline-secondary w-100"
+              @click="clearRoomFilter"
+            >
               Clear
             </button>
           </div>
@@ -312,7 +348,10 @@ onMounted(loadPage)
           icon="bi-door-closed"
         />
 
-        <div v-else class="table-responsive">
+        <div
+          v-else
+          class="table-responsive"
+        >
           <table class="table table-hover align-middle">
             <thead>
               <tr>
@@ -326,11 +365,15 @@ onMounted(loadPage)
             </thead>
 
             <tbody>
-              <tr v-for="room in rooms" :key="room.orRoomId">
+              <tr
+                v-for="room in rooms"
+                :key="room.orRoomId"
+              >
                 <td>#{{ room.orRoomId }}</td>
                 <td>{{ room.roomName }}</td>
                 <td>{{ room.roomType }}</td>
                 <td>{{ room.location }}</td>
+
                 <td>
                   <span
                     class="badge"
@@ -339,6 +382,7 @@ onMounted(loadPage)
                     {{ room.isActive ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
+
                 <td class="text-end">
                   <button
                     class="btn btn-sm btn-outline-primary me-2"
@@ -383,11 +427,8 @@ onMounted(loadPage)
           </div>
         </div>
       </div>
-
-      
     </div>
 
-    <!-- Create/Edit Room Modal -->
     <AppModal
       :show="showRoomModal"
       :title="selectedRoom ? `Edit Room #${selectedRoom.orRoomId}` : 'Create Room'"
@@ -406,7 +447,10 @@ onMounted(loadPage)
 
         <div class="col-md-4">
           <label class="form-label">Room Type</label>
-          <select v-model="roomForm.roomType" class="form-select">
+          <select
+            v-model="roomForm.roomType"
+            class="form-select"
+          >
             <option value="Standard">Standard</option>
             <option value="Cardiac">Cardiac</option>
             <option value="Neuro">Neuro</option>
@@ -426,7 +470,10 @@ onMounted(loadPage)
 
         <div class="col-md-4">
           <label class="form-label">Active</label>
-          <select v-model="roomForm.isActive" class="form-select">
+          <select
+            v-model="roomForm.isActive"
+            class="form-select"
+          >
             <option :value="true">Yes</option>
             <option :value="false">No</option>
           </select>
@@ -434,7 +481,10 @@ onMounted(loadPage)
       </div>
 
       <template #footer>
-        <button class="btn btn-outline-secondary" @click="resetRoomForm">
+        <button
+          class="btn btn-outline-secondary"
+          @click="resetRoomForm"
+        >
           Cancel
         </button>
 
@@ -443,7 +493,10 @@ onMounted(loadPage)
           :disabled="saving"
           @click="submitRoom"
         >
-          <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <span
+            v-if="saving"
+            class="spinner-border spinner-border-sm me-2"
+          ></span>
           {{ selectedRoom ? 'Update Room' : 'Create Room' }}
         </button>
       </template>

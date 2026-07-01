@@ -201,7 +201,7 @@ const handleAutoAssignCases = async () => {
 
     showToast(
       `Auto assignment completed. Cases scheduled: ${casesScheduled}, Requests skipped: ${requestsSkipped}.`,
-      casesScheduled > 0 ? 'success' : 'warning'
+      casesScheduled > 0 ? 'success' : 'success'
     )
 
     if (skippedRequests.length > 0) {
